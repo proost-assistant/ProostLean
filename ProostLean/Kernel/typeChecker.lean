@@ -1,59 +1,82 @@
 import ProostLean.Kernel.Level
 import ProostLean.Kernel.Reduce
 import ProostLean.Kernel.Term
+import ProostLean.Kernel.Nbe
+
+
+set_option autoImplicit false
 
 open Reduce
 
-abbrev TypedTerm := Term × Term
 
-inductive TCError : Type := 
-  | notUniverse : Term → TCError
-  | notDefEq : Term → Term → TCError
-  | wrongArgumentType : Term → Term → TypedTerm → TCError
-  | notAFunction : TypedTerm → Term → TCError
-  | typeMismatch : Term → Term → TCError
 
-abbrev Result (A : Type) := Except TCError A
+partial def Value.is_prop_type (closure : List Value := []): Value → TCEnv Bool 
+  | abs .. 
+  | sort .. => pure false
+  | prod _ cod => do (← Term.eval cod.closure cod.term).is_prop_type cod.closure
+  | neutral (.ax a) _ => pure $ a.type == .sort 0
+  | neutral (.var x) _ => closure.get! x |>.is_prop_type closure
+
+mutual
+  partial def Neutral.is_irrelevant (closure : List Value := []): Neutral → TCEnv Bool 
+    | .ax a => a.type.eval closure >>= Value.is_prop_type closure
+    | .var x => closure.get! x |>.is_irrelevant closure
+
+  partial def Value.is_irrelevant (closure : List Value := []): Value → TCEnv Bool 
+    | .neutral ne _ => ne.is_irrelevant closure
+    | .abs _ body => do (← Term.eval body.closure body.term).is_irrelevant body.closure
+    | _ => pure false
+end
+
+mutual
+
+partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
+  if lhs == rhs then
+    return true
+  
+  let lhs ← lhs.eval 
+  let rhs ← rhs.eval
+
+  lhs.conversion rhs
+
+
+partial def Value.conversion (lhs rhs : Value) : TCEnv Bool := do
+  if lhs == rhs || (← lhs.is_irrelevant) then
+    return true
+  
+  match lhs,rhs with
+    | .sort l₁, .sort l₂ => pure $ l₁ == l₂
+    | .abs _ t₁, .abs _ t₂ => t₁.term.conversion  t₂.term
+    | .prod t₁ u₁, .prod t₂ u₂ => pure $ (← t₁.conversion  t₂) && (← u₁.term.conversion  u₂.term)
+    | _,_ => pure false
+
+end
+
+set_option trace.Meta.synthInstance true
+
+#check (inferInstance : Repr (TCEnv Bool))
+
+#eval Term.conversion (.sort 0) (.app (.abs none $ .var 0) (.sort 0))
 
 namespace Term 
 
-partial def conversion (lhs rhs : Term) : Bool := Id.run do
-  if lhs = rhs then
-    return true
-  if !lhs.is_relevant then
-    return true
-  let lhs := reduce lhs
-  let rhs := reduce rhs
 
-  if lhs = rhs then
-    return true
-
-  match lhs,rhs with
-    | sort l₁, sort l₂ => l₁ == l₂
-    | var i, var j => i == j
-    | abs _ t₁, abs _ t₂ => conversion t₁ t₂
-    | prod t₁ u₁, prod t₂ u₂
-    | app t₁ u₁, app t₂ u₂ => conversion t₁ t₂ && conversion u₁ u₂
-    | _,_ => false
-
-instance : BEq Term := ⟨conversion⟩
-
-def is_def_eq (lhs rhs : Term) : Result Unit := do
+def is_def_eq (lhs rhs : Term) : TCEnv Unit := do
   if lhs != rhs then 
     throw $ .notDefEq lhs rhs
 
-def imax (lhs rhs : Term) : Result Term := do
+def imax (lhs rhs : Term) : TCEnv Term := do
   match lhs,rhs with
     | sort l₁, sort l₂ => return sort $ l₁.imax l₂
     | sort _,_ => throw $ .notUniverse rhs
     | _,_ => throw $ .notUniverse lhs
   
-def infer : Term → Result Term
+def infer : Term → TCEnv Term
   | sort l => pure $ sort l.succ
-  | var _ => panic "ah"
+  | var _ => pure ty
   | prod t u => do
-    let univ_t := (← t.infer).whnf
-    let univ_u := (← u.infer).whnf
+    let univ_t ← (← t.infer).whnf
+    let univ_u ← (← u.infer).whnf
     univ_t.imax univ_u
 
   | abs t u => do
@@ -63,7 +86,7 @@ def infer : Term → Result Term
     else throw $ .notUniverse type_t
 
   | app t u => do
-    let type_t := (← t.infer).whnf
+    let type_t ← (← t.infer).whnf
      
     if let prod arg_type cls := type_t then
       let type_u ← u.infer 
@@ -74,9 +97,9 @@ def infer : Term → Result Term
     else throw $ .notAFunction (t,type_t) u
    | const .. => panic "ah"
 
-def check (t ty : Term) : Result Unit := do
+def check (t ty : Term) : TCEnv Unit := do
   let tty ← t.infer 
-  if ! tty.conversion ty then
+  if ! (← tty.conversion ty) then
     throw $ .typeMismatch ty tty
 
 end Term

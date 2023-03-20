@@ -1,25 +1,16 @@
 import ProostLean.Kernel.Level
-import ProostLean.Kernel.Reduce
+import ProostLean.Kernel.Core
 
+/-namespace Term
 
-inductive Term : Type :=
-  | var  : Nat → Term 
-  | sort : Level → Term
-  | app  : Term → Term → Term
-  | abs  : Term → Term → Term
-  | prod  : Term → Term → Term
-  | const : String → Term 
-deriving Repr, DecidableEq, Inhabited
-
-namespace Term
-
-def shift (offset depth : Nat) : Term → Term
+-- Only partial because structural recursion on nested inductives is broken
+partial def shift (offset depth : Nat) : Term → Term
   | var n => 
     let n := if n > depth then n+offset else n
     var n
   | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
   | abs ty body =>
-    let ty := ty.shift offset depth
+    let ty   := ty.map (·.shift offset depth)
     let body := body.shift offset depth.succ
     abs ty body
   | prod ty body =>
@@ -28,14 +19,14 @@ def shift (offset depth : Nat) : Term → Term
     prod ty body
   | self => self
 
-def substitute (self sub : Term) (depth : Nat) : Term := match self with
+partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
       | .eq => sub.shift depth.pred 0
       | .gt => var n.pred
       | .lt => var n
   | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
   | abs ty body => 
-    let ty := ty.substitute sub depth
+    let ty := ty.map (·.substitute sub depth)
     let body := body.substitute sub depth.succ
     abs ty body 
   | prod ty body => 
@@ -45,19 +36,28 @@ def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | t => t
 
 
-partial def whnf (t : Term) : Term := match t with
-  | app t₁ t₂ =>
-    if let abs _ body := whnf t₁ then whnf $ body.substitute t₂ 1
-    else t
-  | _ => t
+partial def whnf (t : Term) : TCEnv Term := match t with
+  | app t₁ t₂ => do
+    if let abs _ body := ← whnf t₁ then whnf $ body.substitute t₂ 1
+    else pure t
+  | const s => do
+    try
+      reduceDecl s
+    catch
+      | .unknownConstant _ => pure t
+      | _ => unreachable!
+  | _ => pure t
 
-instance : Reduce Term := ⟨whnf⟩   
 
-def is_relevant : Term → Bool 
-  | var _ => panic "ah"
-  | abs _ body => body.is_relevant
-  | app t _ => t.is_relevant
-  -- TODO | decl d => d.decl.term.is_relevant
-  | _ => false
+def is_relevant (closure : List Term): Term → TCEnv Bool 
+  | var x => do
+    if let some t := closure.get? x then 
+      t.is_relevant closure
+    else 
+      throw $ .unboundDeBruijnIndex x closure
+  | abs _ body => body.is_relevant closure
+  | app t _ => t.is_relevant closure
+  | const s => do return (← (← getType s).whnf) == sort 0
+  | _ => pure false
 
-end Term
+end Term -/

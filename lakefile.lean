@@ -1,15 +1,12 @@
 import Lake
 open Lake DSL
 
-package proostLean {
-  -- add package configuration options here
-}
+package proostLean 
 
-lean_lib ProostLean {
-  -- add library configuration options here
-}
+lean_lib ProostLean 
 
-@[defaultTarget]
-lean_exe proostLean {
+@[default_target]
+lean_exe proostLean where
   root := `Main
-}
+
+require std from git "https://github.com/leanprover/std4" @ "main"

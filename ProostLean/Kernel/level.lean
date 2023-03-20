@@ -18,7 +18,8 @@ instance : OfNat Level n := ⟨
     | n+1 => .succ $ foo n
   foo n
 ⟩ 
-@[matchPattern]
+
+@[match_pattern]
 instance : HAdd Level Nat Level := ⟨
   let rec foo (l : Level): Nat → Level
     | 0 => l
