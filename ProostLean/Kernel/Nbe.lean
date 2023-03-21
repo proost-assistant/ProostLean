@@ -1,4 +1,5 @@
 import ProostLean.Kernel.Core
+import ProostLean.Kernel.Term
 
 mutual
 
@@ -9,6 +10,7 @@ mutual
     fun x => do
     add_trace s!"evaluating {x} in closure {closure}"
     match x with
+    | .ann t _ => t.eval closure
     | .sort l => return .sort l 
     | .app fn arg => do
         let fn ← fn.eval closure 
@@ -36,11 +38,11 @@ mutual
         else 
           add_trace s!"unbound index {x} with closure {closure}"
           return .neutral (.var x) []
-    | .const s => do
+    | .const s arr => do
         let res := (← read).find? s
         match res with
-          | some (.ax a) => pure $ .neutral (.ax a) []
-          | some (.de d) => d.term.eval closure 
+          | some (.ax a) => pure $ .neutral (.ax a arr) []
+          | some (.de d) => d.term |>.substitute_univ arr |>.eval closure 
           | none => throw $ .unknownConstant s
 end
 
@@ -48,7 +50,7 @@ partial def read_back (size : Nat) : Value → TCEnv Term
   | .sort l => pure $ .sort l
   | .neutral ne spine => 
     let ne : Term := match ne with
-      | .ax a => .const a.name
+      | .ax a arr => .const a.name arr
       | .var x => .var x
     List.foldl (λ acc x => do return .app (← acc) $ (← read_back size x)) 
       (pure ne) spine

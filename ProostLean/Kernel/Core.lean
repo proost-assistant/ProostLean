@@ -4,12 +4,13 @@ import Std.Data.HashMap
 open Std
 
 inductive Term : Type :=
-  | var  : Nat → Term 
-  | sort : Level → Term
-  | app  : Term → Term → Term
-  | abs  : Option Term → Term → Term
+  | var   : Nat → Term 
+  | sort  : Level → Term
+  | app   : Term → Term → Term
+  | abs   : Option Term → Term → Term
   | prod  : Term → Term → Term
-  | const : String → Term 
+  | const : String → Array Level →  Term 
+  | ann   : Term → Term → Term
 deriving Repr, Inhabited, BEq
 
 def Term.toString : Term → String
@@ -19,7 +20,9 @@ def Term.toString : Term → String
     | .abs (some t1) t2 => "λ" ++ t1.toString ++ " => " ++ t2.toString
     | .abs _ t2 => "λ _ => "++ t2.toString
     | .prod t1 t2  => "Π " ++ t1.toString ++ "." ++ t2.toString
-    | .const s => s
+    | .const s #[]=> s 
+    | .const s l => s ++ ToString.toString l
+    | .ann t ty => "(" ++ t.toString ++ " : " ++ ty.toString ++ ")"
 
 instance : ToString Term := ⟨Term.toString⟩ 
 
@@ -36,7 +39,7 @@ deriving BEq,Repr
 
 inductive Neutral : Type :=
   | var : Nat → Neutral
-  | ax : Axiom → Neutral 
+  | ax : Axiom → Array Level → Neutral 
 deriving BEq,Repr
 
 inductive Value : Type :=
@@ -50,19 +53,21 @@ instance : ToString Value := ⟨reprStr⟩
 
 def Value.var (n : Nat) : Value := .neutral (.var n) []
 
-structure Decl where  
+structure Decl : Type where  
   type : Term
   n_of_univ : Nat
   term : Term
 
-inductive Const :=
+inductive Const  : Type:=
   | ax : Axiom → Const
   | de : Decl  → Const 
 
-namespace Const
-def type : Const → Term
+
+def Const.type : Const → Term
   | .ax a | .de a => a.type
-end Const
+
+def Const.n_of_univ : Const → Nat
+  | .ax a | .de a => a.n_of_univ
 
 abbrev ConstContext := HashMap String Const
 
@@ -82,6 +87,7 @@ inductive TCError : Type :=
   | typeMismatch : Term → Term → TCError
   | unTypedVariable : Nat → Context → TCError
   | cannotInfer : Term → TCError
+  | wrongNumberOfUniverse : String → Nat → Nat → TCError 
 deriving Repr
 
 abbrev Result (A) := Except TCError A
@@ -104,9 +110,11 @@ def reduce_decl (s : String) : TCEnv Term := do
   else 
     throw $ .unknownConstant s
 
-def get_type (s : String) : TCEnv Term := do
+def get_type (s : String) (arr : Array Level): TCEnv Term := do
   let res := (← read).find? s
   if let some $ c := res then
+    if c.n_of_univ != arr.size then
+      throw $ .wrongNumberOfUniverse s c.n_of_univ arr.size
     return c.type
   else 
     throw $ .unknownConstant s
@@ -116,9 +124,8 @@ def Context.get_type (con : Context) (n:Nat) : TCEnv Term := do
   let some ty := optty | throw $ .unTypedVariable n con
   pure ty
 
-
-def todo! {A : Type _} [Inhabited A] : A := panic! "todo"
-
-syntax "return" term : term
-macro_rules
-  | `(term| "return" $t:term) => `(term | do return $t)
+inductive Command : Type :=
+  | def : String → Option Term → Term → Command
+  | axiom : String → Term → Command
+  | check : Term → Command
+  | eval : Term → Command

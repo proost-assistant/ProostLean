@@ -1,28 +1,22 @@
 import ProostLean.Kernel.Level
-import ProostLean.Kernel.Reduce
 import ProostLean.Kernel.Term
 import ProostLean.Kernel.Nbe
 import ProostLean.Util.Misc
 
-
 set_option autoImplicit false
-
-open Reduce
-
-
 
 partial def Value.is_prop_type (closure : List Value := []): Value → TCEnv Bool 
   | abs .. 
   | sort .. => pure false
   | prod _ cod => do (← Term.eval cod.closure cod.term).is_prop_type cod.closure
-  | neutral (.ax a) _ => pure $ a.type == .sort 0
+  | neutral (.ax a arr) _ => pure $ (a.type |>.substitute_univ arr) == .sort 0
   | neutral (.var x) _ => 
       if let some b := closure.get? x |>.map (·.is_prop_type closure)
       then b else pure false
 
 mutual
   partial def Neutral.is_irrelevant (closure : List Value := []): Neutral → TCEnv Bool 
-    | .ax a => a.type.eval closure >>= Value.is_prop_type closure
+    | .ax a arr => (a.type |>.substitute_univ arr).eval closure >>= Value.is_prop_type closure
     | .var x =>       if let some b := closure.get? x |>.map (·.is_prop_type closure)
       then b else pure false
 
@@ -33,6 +27,8 @@ mutual
 end
 
 partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
+  let lhs := lhs.noAnn
+  let rhs := rhs.noAnn
   if lhs == rhs then
     return true
   --if !lhs.is_relevant then
@@ -67,7 +63,10 @@ def imax (lhs rhs : Term) : TCEnv Term := do
     | _,_ => throw $ .notUniverse lhs
 
 mutual
-def infer (con : Context): Term → TCEnv Term
+partial def infer (con : Context): Term → TCEnv Term
+  | ann t ty => do
+    check con t ty
+    return ty
   | sort l => pure $ sort l.succ
   | var n => con.get_type n
   | prod t u => do
@@ -90,9 +89,9 @@ def infer (con : Context): Term → TCEnv Term
       check con u arg_type
       pure $ cls.substitute u 1
     else throw $ .notAFunction₂ (t,type_t) u
-   | const s => get_type s
+   | const s arr => get_type s arr
 
-def check (con : Context): Term → Term →  TCEnv Unit 
+partial def check (con : Context): Term → Term →  TCEnv Unit 
   | .abs none body, .prod a b => check ((some a)::con) body b
   | .abs (some ty) body, .prod a b => do
     is_def_eq a ty
@@ -103,12 +102,21 @@ def check (con : Context): Term → Term →  TCEnv Unit
     check con u a
     let b := b.substitute u 1
     is_def_eq b ty
-  | t, ty => do  
+  | .const s arr,ty => do is_def_eq ty $ ← get_type s arr
+  | .ann t ty, tty => do
+    is_def_eq ty tty
+    check con t ty
+  | .sort l₁, .sort l₂ => 
+    unless l₁ == l₂ do
+      throw $ .notDefEq (.sort l₁) (.sort l₂)
+  | .var n, ty => do
+    is_def_eq ty $ ← con.get_type n
+  | t,ty => do
     let tty ← infer con t
     is_def_eq ty tty
 end
 
-#eval check [] (.app (.abs none $ .abs none $ .var 0) (.sort 0)) (.prod (.sort 0) $ .prod (.sort 0) (.sort 1)) default []
+#eval check [] (.app (.abs (some $ .sort 1) $ .abs (some $ .sort 1) $ .var 0) (.sort 0)) (.prod (.sort 1) $ .prod (.sort 1) (.sort 1)) default []
 
 
 end Term

@@ -6,3 +6,10 @@ def List.allM₂ {m : Type → Type u} [Monad m] {α : Type v} {β : Type w} (f 
     | true  => allM₂ f as bs
     | false => pure false
   | _,_ => pure false
+
+
+def todo! {A : Type _} [Inhabited A] : A := panic! "todo"
+
+syntax "return" term : term
+macro_rules
+  | `(term| "return" $t:term) => `(term | do return $t)

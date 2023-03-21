@@ -3,6 +3,10 @@ import ProostLean.Kernel.Core
 
 namespace Term
 
+def prop := sort 0
+def type (l : Level) := sort l.succ
+
+
 -- Only partial because structural recursion on nested inductives is broken
 partial def shift (offset depth : Nat) : Term → Term
   | var n => 
@@ -17,7 +21,9 @@ partial def shift (offset depth : Nat) : Term → Term
     let ty := ty.shift offset depth
     let body := body.shift offset depth.succ
     prod ty body
-  | self => self
+  | ann t ty => ann (t.shift offset depth) (ty.shift offset depth)
+  | const s l => const s l
+  | sort l => sort l
 
 partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
@@ -33,7 +39,24 @@ partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
     let ty := ty.substitute sub depth
     let body := body.substitute sub depth.succ
     prod ty body
+  | ann t ty => ann (t.substitute sub depth) (ty.substitute sub depth)
+  | const s l => const s l
+  | sort l => sort l
+
+def noAnn : Term → Term
+  | ann t _ => t
   | t => t
+
+
+partial def substitute_univ (lvl : Array Level) : Term → Term
+  | sort l => sort $ l.substitute lvl
+  | var n => var n
+  | app t₁ t₂ => app (t₁.substitute_univ lvl) (t₂.substitute_univ lvl)
+  | abs ty body => abs (ty.map (substitute_univ lvl)) (body.substitute_univ lvl)
+  | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
+  | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
+  | const s arr => const s $ arr.map (Level.substitute · lvl)
+
 
 /-
 partial def whnf (t : Term) : TCEnv Term := match t with

@@ -1,5 +1,3 @@
-import ProostLean.Kernel.Reduce
-open Reduce
 inductive Level : Type :=
   | zero : Level
   | succ : Level → Level 
@@ -62,7 +60,6 @@ partial def normalize (self: Level) : Level := match self with
       | _,_ => self
   | _ => self
 
-instance : Reduce Level := ⟨normalize⟩
 
 def substitute_single (l : Level) (n : Nat) (u : Level):  Level := match l with
   | zero => zero
@@ -80,8 +77,8 @@ def substitute (l : Level) (univs : Array Level):  Level := match l with
 
 partial def geq_no_subst (lhs rhs : Level) (n : Int) : State := Id.run do
 
-  let lhs := reduce lhs
-  let rhs := reduce rhs
+  let lhs := normalize lhs
+  let rhs := normalize rhs
 
   if let .zero := lhs then if n >= 0 then
     return .true
