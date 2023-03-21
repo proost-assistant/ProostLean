@@ -1,4 +1,4 @@
-# proostLean
+# ProostLean
 
 An reimplementation of the Proost proof-assistant written in Lean 4
 
