@@ -12,6 +12,16 @@ inductive Term : Type :=
   | const : String → Term 
 deriving Repr, Inhabited, BEq
 
+def Term.toString : Term → String
+    | .var i => ToString.toString i
+    | .sort l => "Sort "++ ToString.toString l
+    | .app t1 t2 => "(" ++ t1.toString ++ ") (" ++ t2.toString ++ ")"
+    | .abs (some t1) t2 => "λ" ++ t1.toString ++ " => " ++ t2.toString
+    | .abs _ t2 => "λ _ => "++ t2.toString
+    | .prod t1 t2  => "Π " ++ t1.toString ++ "." ++ t2.toString
+    | .const s => s
+
+instance : ToString Term := ⟨Term.toString⟩ 
 
 structure Axiom where
   name : String
@@ -36,6 +46,8 @@ inductive Value : Type :=
   | prod : Value → AppClosure Value → Value
 deriving Inhabited, BEq,Repr
 
+instance : ToString Value := ⟨reprStr⟩ 
+
 def Value.var (n : Nat) : Value := .neutral (.var n) []
 
 structure Decl where  
@@ -57,40 +69,53 @@ abbrev ConstContext := HashMap String Const
 abbrev ConstEnv := ReaderT ConstContext
 
 abbrev TypedTerm := Term × Term
+abbrev Context := List $ Option Term
 
 inductive TCError : Type := 
-  | unboundDeBruijnIndex : Nat → List Value → TCError 
+  | unboundDeBruijnIndex : Nat → List Term → TCError 
   | unknownConstant : String → TCError
   | notUniverse : Term → TCError
   | notDefEq : Term → Term → TCError
   | wrongArgumentType : Term → Term → TypedTerm → TCError
   | notAFunction : Value → Value → TCError
+  | notAFunction₂ : TypedTerm → Term → TCError
   | typeMismatch : Term → Term → TCError
+  | unTypedVariable : Nat → Context → TCError
+  | cannotInfer : Term → TCError
 deriving Repr
 
 abbrev Result (A) := Except TCError A
 
-abbrev Traced := StateT (List String)
-abbrev TCEnv :=  ConstEnv $ Traced Result 
+abbrev Traced := StateM (List String)
+abbrev TCEnv :=  ConstEnv $ EStateM TCError (List String)  
 
-def addTrace : String → TCEnv Unit :=
-  fun trace => do 
-    let st ← get
+def EStateM.Result.get : EStateM.Result ε σ α → σ 
+  | .ok _ st
+  | .error _ st => st
+
+def add_trace (trace : String): TCEnv Unit := do 
+    let st : List String ← get
     set $ trace::st
 
-def reduceDecl (s : String) : TCEnv Term := do
+def reduce_decl (s : String) : TCEnv Term := do
   let res := (← read).find? s
   if let some $ .de d := res then
     return d.term
   else 
     throw $ .unknownConstant s
 
-def getType (s : String) : TCEnv Term := do
+def get_type (s : String) : TCEnv Term := do
   let res := (← read).find? s
   if let some $ c := res then
     return c.type
   else 
     throw $ .unknownConstant s
+
+def Context.get_type (con : Context) (n:Nat) : TCEnv Term := do
+  let some optty := con.get? n | unreachable!
+  let some ty := optty | throw $ .unTypedVariable n con
+  pure ty
+
 
 def todo! {A : Type _} [Inhabited A] : A := panic! "todo"
 

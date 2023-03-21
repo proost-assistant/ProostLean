@@ -1,7 +1,7 @@
 import ProostLean.Kernel.Level
 import ProostLean.Kernel.Core
 
-/-namespace Term
+namespace Term
 
 -- Only partial because structural recursion on nested inductives is broken
 partial def shift (offset depth : Nat) : Term → Term
@@ -35,7 +35,7 @@ partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
     prod ty body
   | t => t
 
-
+/-
 partial def whnf (t : Term) : TCEnv Term := match t with
   | app t₁ t₂ => do
     if let abs _ body := ← whnf t₁ then whnf $ body.substitute t₂ 1

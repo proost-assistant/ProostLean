@@ -8,9 +8,14 @@ inductive Level : Type :=
   | var  : Nat   → Level 
 deriving Repr, DecidableEq, Inhabited
 
-def foo : Nat → Level 
-  | 0 => .zero
-  | n+1 => .succ $ foo n
+def Level.toString : Level → String
+  | zero => "0"
+  | succ l => l.toString ++ "+1"
+  | var i => "u" ++ ToString.toString i
+  | max l1 l2 => "max (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
+  | imax l1 l2 => "imax (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
+
+instance : ToString Level := ⟨Level.toString⟩ 
 
 instance : OfNat Level n := ⟨
   let rec foo : Nat → Level 

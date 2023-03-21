@@ -7,7 +7,7 @@ mutual
 
   partial def Term.eval (closure : List Value := []): Term → TCEnv Value :=
     fun x => do
-    addTrace "foo"
+    add_trace s!"evaluating {x} in closure {closure}"
     match x with
     | .sort l => return .sort l 
     | .app fn arg => do
@@ -33,7 +33,9 @@ mutual
     | .var x => do
         if let some val := closure.get? x
           then return val
-        else throw $ .unboundDeBruijnIndex x closure
+        else 
+          add_trace s!"unbound index {x} with closure {closure}"
+          return .neutral (.var x) []
     | .const s => do
         let res := (← read).find? s
         match res with
@@ -41,10 +43,6 @@ mutual
           | some (.de d) => d.term.eval closure 
           | none => throw $ .unknownConstant s
 end
-
-#eval Term.eval [] (.app (.abs none $ .abs none $ .var 0) (.sort 0)) default []
-
-#check Except.ok (Value.abs none { term := Term.var 0, closure := [Value.sort (Level.zero)] }, ["foo", "foo", "foo", "foo"])
 
 partial def read_back (size : Nat) : Value → TCEnv Term 
   | .sort l => pure $ .sort l
@@ -69,3 +67,6 @@ partial def read_back (size : Nat) : Value → TCEnv Term
     pure $ .prod ty body
 
 
+def Term.whnf (t : Term): TCEnv Term := do
+  let v ← t.eval []
+  read_back 0 v

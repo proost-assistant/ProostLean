@@ -64,3 +64,5 @@ elab "test_elab " e:proost : term => elabProost default e
 
 #check test_elab fun x y : Bar, z : Foo => x
 --Term.Abs (Term.Const "Foo") (Term.Abs (Term.Const "Foo") (Term.Var 2))
+
+declare_syntax_cat proost_command
