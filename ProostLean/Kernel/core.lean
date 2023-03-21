@@ -52,8 +52,7 @@ def type : Const → Term
   | .ax a | .de a => a.type
 end Const
 
-def ConstContext := HashMap String Const
-
+abbrev ConstContext := HashMap String Const
 
 abbrev ConstEnv := ReaderT ConstContext
 
@@ -71,7 +70,13 @@ deriving Repr
 
 abbrev Result (A) := Except TCError A
 
-abbrev TCEnv :=  ConstEnv Result 
+abbrev Traced := StateT (List String)
+abbrev TCEnv :=  ConstEnv $ Traced Result 
+
+def addTrace : String → TCEnv Unit :=
+  fun trace => do 
+    let st ← get
+    set $ trace::st
 
 def reduceDecl (s : String) : TCEnv Term := do
   let res := (← read).find? s
@@ -86,8 +91,6 @@ def getType (s : String) : TCEnv Term := do
     return c.type
   else 
     throw $ .unknownConstant s
-
-#check (inferInstance : Repr (ReaderM String String))
 
 def todo! {A : Type _} [Inhabited A] : A := panic! "todo"
 

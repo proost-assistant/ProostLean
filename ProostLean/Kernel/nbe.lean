@@ -5,7 +5,10 @@ mutual
   partial def AppClosure.app (closure : AppClosure Value) (arg : Value) : TCEnv Value :=
     closure.term.eval (arg::closure.closure) 
 
-  partial def Term.eval (closure : List Value := []): Term → TCEnv Value 
+  partial def Term.eval (closure : List Value := []): Term → TCEnv Value :=
+    fun x => do
+    addTrace "foo"
+    match x with
     | .sort l => return .sort l 
     | .app fn arg => do
         let fn ← fn.eval closure 
@@ -38,6 +41,10 @@ mutual
           | some (.de d) => d.term.eval closure 
           | none => throw $ .unknownConstant s
 end
+
+#eval Term.eval [] (.app (.abs none $ .abs none $ .var 0) (.sort 0)) default []
+
+#check Except.ok (Value.abs none { term := Term.var 0, closure := [Value.sort (Level.zero)] }, ["foo", "foo", "foo", "foo"])
 
 partial def read_back (size : Nat) : Value → TCEnv Term 
   | .sort l => pure $ .sort l

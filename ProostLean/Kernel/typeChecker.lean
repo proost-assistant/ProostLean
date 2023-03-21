@@ -52,11 +52,7 @@ partial def Value.conversion (lhs rhs : Value) : TCEnv Bool := do
 
 end
 
-set_option trace.Meta.synthInstance true
-
-#check (inferInstance : Repr (TCEnv Bool))
-
-#eval Term.conversion (.sort 0) (.app (.abs none $ .var 0) (.sort 0))
+#eval Term.conversion (.abs none $ .var 0) (.app (.abs none $ .abs none $ .var 0) (.sort 0)) default []
 
 namespace Term 
 
@@ -70,7 +66,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
     | sort l₁, sort l₂ => return sort $ l₁.imax l₂
     | sort _,_ => throw $ .notUniverse rhs
     | _,_ => throw $ .notUniverse lhs
-  
+/-  
 def infer : Term → TCEnv Term
   | sort l => pure $ sort l.succ
   | var _ => pure ty
@@ -101,5 +97,5 @@ def check (t ty : Term) : TCEnv Unit := do
   let tty ← t.infer 
   if ! (← tty.conversion ty) then
     throw $ .typeMismatch ty tty
-
+-/
 end Term
