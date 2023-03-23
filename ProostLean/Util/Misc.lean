@@ -13,3 +13,6 @@ def todo! {A : Type _} [Inhabited A] : A := panic! "todo"
 syntax "return" term : term
 macro_rules
   | `(term| "return" $t:term) => `(term | do return $t)
+
+def uncurry {A B C}: (A → B → C) → (A × B) → C :=
+  λ f => λ ⟨a,b⟩ => f a b  

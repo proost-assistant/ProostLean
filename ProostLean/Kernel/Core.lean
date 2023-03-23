@@ -1,5 +1,6 @@
 import ProostLean.Kernel.Level
 import Std.Data.HashMap
+import ProostLean.Util.Misc
 
 open Std
 
@@ -70,11 +71,16 @@ def Const.n_of_univ : Const → Nat
   | .ax a | .de a => a.n_of_univ
 
 abbrev ConstContext := HashMap String Const
+abbrev VarContext := Array $ Option Term
 
-abbrev ConstEnv := ReaderT ConstContext
+structure TCContext where
+  trace     : Queue String
+  const_con : ConstContext
+  var_cont : VarContext
+deriving Inhabited
+
 
 abbrev TypedTerm := Term × Term
-abbrev Context := List $ Option Term
 
 inductive TCError : Type := 
   | unboundDeBruijnIndex : Nat → List Term → TCError 
@@ -85,44 +91,50 @@ inductive TCError : Type :=
   | notAFunction : Value → Value → TCError
   | notAFunction₂ : TypedTerm → Term → TCError
   | typeMismatch : Term → Term → TCError
-  | unTypedVariable : Nat → Context → TCError
+  | unTypedVariable : Nat → VarContext → TCError
   | cannotInfer : Term → TCError
   | wrongNumberOfUniverse : String → Nat → Nat → TCError 
 deriving Repr
 
 abbrev Result (A) := Except TCError A
 
-abbrev Traced := StateM (List String)
-abbrev TCEnv :=  ConstEnv $ EStateM TCError (List String)  
+abbrev TCEnv := EStateM TCError TCContext
 
 def EStateM.Result.get : EStateM.Result ε σ α → σ 
   | .ok _ st
   | .error _ st => st
 
-def add_trace (trace : String): TCEnv Unit := do 
-    let st : List String ← get
-    set $ trace::st
+def add_trace (tr : String): TCEnv Unit :=
+    modify $ λ con => {con with trace := Queue.enqueue tr con.trace}
+
+def add_var_to_context_no_shift (t : Option Term) : TCEnv Unit := 
+    modify $ λ con => {con with var_cont := con.var_cont.push t}
 
 def reduce_decl (s : String) : TCEnv Term := do
-  let res := (← read).find? s
+  let res := (← get).const_con.find? s
   if let some $ .de d := res then
     return d.term
   else 
     throw $ .unknownConstant s
 
-def get_type (s : String) (arr : Array Level): TCEnv Term := do
-  let res := (← read).find? s
+class GetType (A: Type) where
+  get_type : A → TCEnv Term 
+
+def get_const_type (s : String) (arr : Array Level): TCEnv Term := do
+  let res := (← get).const_con.find? s
   if let some $ c := res then
     if c.n_of_univ != arr.size then
       throw $ .wrongNumberOfUniverse s c.n_of_univ arr.size
     return c.type
   else 
     throw $ .unknownConstant s
+instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩ 
 
-def Context.get_type (con : Context) (n:Nat) : TCEnv Term := do
-  let some optty := con.get? n | unreachable!
-  let some ty := optty | throw $ .unTypedVariable n con
+def get_var_type (n:Nat) : TCEnv Term := do
+  let some optty := (← get).var_cont.get? n | unreachable!
+  let some ty := optty | throw $ .unTypedVariable n (← get).var_cont
   pure ty
+instance : GetType $ Nat := ⟨get_var_type⟩ 
 
 inductive Command : Type :=
   | def : String → Option Term → Term → Command
