@@ -1,7 +1,19 @@
+soon-soon
 - parse universes
 - enable universe substitution
 - enable back proof-irrelevance
 - make the right monad for command elaboration
 - add syntax for commands
 - test, a lot
+
+
+Soon-ish:
+- implement some axioms like True/False, Nat and Eq
+- add recursors' reduction in the reduction engine
 - finally finish CCobs somewhere ?
+
+
+Long run :
+- pattern-matching + exhaustiveness-check + termination-check
+- elaboration 
+- general inductive types framework
