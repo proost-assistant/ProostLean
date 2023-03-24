@@ -5,28 +5,29 @@ import ProostLean.Util.Misc
 
 set_option autoImplicit false
 open GetType
---partial def Value.is_prop_type : Value → TCEnv Bool 
---  | abs .. 
+--partial def Value.is_prop_type : Value → TCEnv Bool
+--  | abs ..
 --  | sort .. => pure false
 --  | prod _ cod => do (← Term.eval cod.closure cod.term).is_prop_type cod.closure
 --  | neutral (.ax a arr) _ => pure $ (a.type |>.substitute_univ arr) == .sort 0
---  | neutral (.var x) _ => 
+--  | neutral (.var x) _ =>
 --      if let some b := closure.get? x |>.map (·.is_prop_type closure)
 --      then b else pure false
 --
 --mutual
---  partial def Neutral.is_irrelevant : Neutral → TCEnv Bool 
+--  partial def Neutral.is_irrelevant : Neutral → TCEnv Bool
 --    | .ax a arr => (a.type |>.substitute_univ arr).eval closure >>= Value.is_prop_type closure
 --    | .var x =>       if let some b := closure.get? x |>.map (·.is_prop_type closure)
 --      then b else pure false
 --
---  partial def Value.is_irrelevant : Value → TCEnv Bool 
+--  partial def Value.is_irrelevant : Value → TCEnv Bool
 --    | .neutral ne _ => ne.is_irrelevant closure
 --    | .abs _ body => do (← Term.eval body.closure body.term).is_irrelevant body.closure
 --    | _ => pure false
 --end
 
 partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
+  add_trace s!"checking {lhs} = {rhs}"
   let lhs := lhs.noAnn
   let rhs := rhs.noAnn
   if lhs == rhs then
@@ -49,7 +50,7 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
 
 #eval Term.conversion (.abs none $ .var 0) (.app (.abs none $ .abs none $ .var 0) (.sort 0)) default
 
-namespace Term 
+namespace Term
 
 
 def is_def_eq (lhs rhs : Term) : TCEnv Unit :=
@@ -63,7 +64,9 @@ def imax (lhs rhs : Term) : TCEnv Term := do
     | _,_ => throw $ .notUniverse lhs
 
 mutual
-partial def infer : Term → TCEnv Term
+partial def infer (t : Term): TCEnv Term := do
+  add_trace s!"trying to infer the type of {t}"
+  let res ← match t with
   | ann t ty => do
     check t ty
     return ty
@@ -76,22 +79,26 @@ partial def infer : Term → TCEnv Term
     univ_t.imax univ_u
   | t@(abs none _) => throw $ .cannotInfer t
   | abs (some t) u => do
-    let type_t ← t.infer
-    if let sort _ := type_t then
-      add_var_to_context $ some type_t
+    let univ_t ← t.infer
+    if let sort _ := univ_t then
+      add_var_to_context $ some t
       return t.prod $ ← u.infer
-    else throw $ .notUniverse type_t
+    else throw $ .notUniverse univ_t
 
   | app t u => do
     let type_t ← (← t.infer).whnf
-    
+
     if let prod arg_type cls := type_t then
       check u arg_type
       pure $ cls.substitute u 1
     else throw $ .notAFunction₂ (t,type_t) u
    | const s arr => get_type (s,arr)
+   add_trace s!"inferred {t} : {res}"
+   return res
 
-partial def check : Term → Term →  TCEnv Unit 
+partial def check (t ty : Term ):  TCEnv Unit := do
+  add_trace s!"checking {t} : {ty}"
+  match t,ty with
   | .abs none body, .prod a b => do
     add_var_to_context $ some a
     check  body b
@@ -109,7 +116,7 @@ partial def check : Term → Term →  TCEnv Unit
   | .ann t ty, tty => do
     is_def_eq ty tty
     check t ty
-  | .sort l₁, .sort l₂ => 
+  | .sort l₁, .sort l₂ =>
     unless l₁ == l₂ do
       throw $ .notDefEq (.sort l₁) (.sort l₂)
   | .var n, ty => do
@@ -119,7 +126,16 @@ partial def check : Term → Term →  TCEnv Unit
     is_def_eq ty tty
 end
 
-#eval check (.app (.abs (some $ .sort 1) $ .abs (some $ .sort 1) $ .var 0) (.sort 0)) (.prod (.sort 1) $ .prod (.sort 1) (.sort 1)) default
+#eval is_def_eq (.sort 1) (.sort 2) default
+#eval check (.abs (some $ .sort 1) $ .abs (some $ .sort 2) $ .var 1) (.prod (.sort 1) $ .prod (.sort 1) (.sort 1)) default |>.get.trace
+/-
+["Π Sort 1.Sort 1 and Π Sort 1.Π Sort 1.Sort 1 are not definitionally equal", "checking Sort 0 : Sort 1",
+ "inferred 0 : Sort 1", "trying to infer the type of 0", "inferred Sort 1 : Sort 2",
+ "trying to infer the type of Sort 1", "trying to infer the type of λ Sort 1 => 0", "inferred Sort 1 : Sort 2",
+ "trying to infer the type of Sort 1", "trying to infer the type of λ Sort 1 => λ Sort 1 => 0",
+ "checking (λ Sort 1 => λ Sort 1 => 0) (Sort 0) : Π Sort 1.Π Sort 1.Sort 1"]
+
+-/
 
 
 end Term
