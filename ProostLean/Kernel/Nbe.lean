@@ -1,5 +1,6 @@
 import ProostLean.Kernel.Core
 import ProostLean.Kernel.Term
+import Proostlean.Kernel.Axioms
 
 mutual
 

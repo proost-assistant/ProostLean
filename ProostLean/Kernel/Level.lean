@@ -71,6 +71,12 @@ partial def normalize (self: Level) : Level := match self with
       | _,_ => self
   | _ => self
 
+def n_of_univ : Level → Nat 
+  | zero => 0
+  | succ l => l.n_of_univ
+  | max l₁ l₂
+  | imax l₁ l₂ => Max.max l₁.n_of_univ l₂.n_of_univ
+  | var k => k
 
 def substitute_single (l : Level) (n : Nat) (u : Level):  Level := match l with
   | zero => zero

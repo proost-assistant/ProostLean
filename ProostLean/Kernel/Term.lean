@@ -60,7 +60,6 @@ partial def substitute_univ (lvl : Array Level) : Term → Term
   | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
   | const s arr => const s $ arr.map (Level.substitute · lvl)
 
-
 /-
 partial def whnf (t : Term) : TCEnv Term := match t with
   | app t₁ t₂ => do

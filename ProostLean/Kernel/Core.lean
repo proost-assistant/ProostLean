@@ -14,6 +14,20 @@ inductive Term : Type :=
   | ann   : Term → Term → Term
 deriving Repr, Inhabited, BEq
 
+def Term.n_of_univ : Term → Nat 
+  | .var _ => 0
+  | .abs t₁ t₂ => 
+    let t₁_univ := match t₁ with | some t => t.n_of_univ | none => 0
+    max t₁_univ t₂.n_of_univ
+  | .app t₁ t₂ 
+  | .ann t₁ t₂
+  | .prod t₁ t₂ => max t₁.n_of_univ t₂.n_of_univ
+  | .const _ arr => arr.foldl (fun acc l => max acc l.n_of_univ) 0
+  | .sort l => l.n_of_univ
+
+def Term.prop : Term := .sort 0
+def Term.type (l : Level) : Term := .sort l.succ
+
 def Term.toString : Term → String
     | .var i => ToString.toString i
     | .sort l => "Sort "++ ToString.toString l
@@ -27,10 +41,15 @@ def Term.toString : Term → String
 
 instance : ToString Term := ⟨Term.toString⟩
 
+
+
+
+
+
 structure Axiom where
   name : String
   type : Term
-  n_of_univ : Nat
+  n_of_univ : Nat := type.n_of_univ
 deriving BEq,Repr
 
 structure AppClosure (Values : Type): Type where
@@ -63,7 +82,6 @@ inductive Const  : Type:=
   | ax : Axiom → Const
   | de : Decl  → Const
 
-
 def Const.type : Const → Term
   | .ax a | .de a => a.type
 
@@ -73,7 +91,6 @@ def Const.n_of_univ : Const → Nat
 abbrev ConstContext := HashMap String Const
 abbrev VarContext := Array $ Option Term
 
-deriving instance Repr for Queue
 structure TCContext where
   trace     : List String
   const_con : ConstContext
@@ -95,6 +112,7 @@ inductive TCError : Type :=
   | unTypedVariable : Nat → VarContext → TCError
   | cannotInfer : Term → TCError
   | wrongNumberOfUniverse : String → Nat → Nat → TCError
+  | alreadyDefined : String → TCError
 deriving Repr
 
 instance : ToString TCError where
@@ -117,6 +135,15 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
 
 def add_trace (tr : String): TCEnv Unit :=
     modify $ λ con => {con with trace := tr :: con.trace}
+
+def add_axiom (a : Axiom) : TCEnv Unit := do
+    let name := a.name
+    if let some _ := (← get).const_con.find? name then
+      throw $  .alreadyDefined name
+    modify $ λ con => {con with const_con := HashMap.insert con.const_con name $ .ax a}
+
+def add_axioms (a : List Axiom) : TCEnv Unit := do
+  a.foldlM (fun _ ax => add_axiom ax) ()
 
 instance (priority := high) : MonadExceptOf TCError TCEnv where
   throw err := do
@@ -158,3 +185,5 @@ inductive Command : Type :=
   | axiom : String → Term → Command
   | check : Term → Command
   | eval : Term → Command
+
+
