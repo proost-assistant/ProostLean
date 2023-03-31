@@ -3,10 +3,6 @@ import ProostLean.Kernel.Core
 
 namespace Term
 
-def prop := sort 0
-def type (l : Level) := sort l.succ
-
-
 -- Only partial because structural recursion on nested inductives is broken
 partial def shift (offset depth : Nat) : Term → Term
   | var n => 
@@ -50,7 +46,6 @@ def noAnn : Term → Term
   | ann t _ => t
   | t => t
 
-
 partial def substitute_univ (lvl : Array Level) : Term → Term
   | sort l => sort $ l.substitute lvl
   | var n => var n
@@ -59,6 +54,7 @@ partial def substitute_univ (lvl : Array Level) : Term → Term
   | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
   | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
   | const s arr => const s $ arr.map (Level.substitute · lvl)
+
 
 /-
 partial def whnf (t : Term) : TCEnv Term := match t with

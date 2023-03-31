@@ -1,12 +1,25 @@
 import ProostLean.Util.Queue
-import ProostLean.Kernel.Core
+import ProostLean.Elab
 import Lean
 
 open Queue
 open Lean Elab Meta
 
+declare_syntax_cat proost_level
+
+syntax num : proost_level
+syntax ident : proost_level
+syntax proost_level "+" num : proost_level
+syntax "max" proost_level (proost_level)+ : proost_level
+syntax "imax" proost_level (proost_level)+ : proost_level
+
+
+declare_syntax_cat constant
+syntax ident (".{" (proost_level)+ "}")? : constant
+
+
 declare_syntax_cat proost
-syntax ident : proost
+syntax constant : proost
 syntax "(" proost ")" : proost
 syntax "(" proost ":" proost ")" : proost
 syntax "fun" (ident* (":" proost)?),* "=>" proost : proost 
@@ -14,12 +27,8 @@ syntax "(" ident* ":" proost ")" "->" proost : proost
 syntax proost "->" proost : proost
 syntax proost proost : proost
 syntax "Prop" : proost
-syntax "Type" num : proost
-syntax "Sort" num : proost
-
-#print Lean.Level
-
-#check Array.empty
+syntax "Type" proost_level : proost
+syntax "Sort" proost_level : proost
 
 partial def elabProost (pos : Queue Name) (stx : TSyntax `proost) : MetaM Expr := do
   match stx with
@@ -74,3 +83,5 @@ elab "test_elab " e:proost : term => elabProost default e
 
 declare_syntax_cat proost_command
 syntax "def" ident (":" proost)? ":=" proost : proost_command
+
+#check whnf

@@ -25,6 +25,7 @@ def cast_ : Axiom :=
       $ prod (var 3) 
       $ var 3
   }
+  
 def transport : Axiom :=
   {
     name := "transp"

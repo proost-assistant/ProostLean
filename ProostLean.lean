@@ -1,3 +1,3 @@
 import ProostLean.Util.Queue
-import ProostLean.Kernel.Core
+import ProostLean.Kernel
 import ProostLean.Parser.Parse

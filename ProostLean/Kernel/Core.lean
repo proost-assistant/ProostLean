@@ -50,7 +50,7 @@ structure Axiom where
   name : String
   type : Term
   n_of_univ : Nat := type.n_of_univ
-deriving BEq,Repr
+deriving BEq, Repr
 
 structure AppClosure (Values : Type): Type where
   term : Term
@@ -60,14 +60,14 @@ deriving BEq,Repr
 inductive Neutral : Type :=
   | var : Nat → Neutral
   | ax : Axiom → Array Level → Neutral
-deriving BEq,Repr
+deriving BEq, Repr
 
 inductive Value : Type :=
   | neutral : Neutral → List Value → Value
   | sort : Level → Value
   | abs : Option Value → AppClosure Value → Value
   | prod : Value → AppClosure Value → Value
-deriving Inhabited, BEq,Repr
+deriving Inhabited, BEq, Repr
 
 instance : ToString Value := ⟨reprStr⟩
 
@@ -185,5 +185,3 @@ inductive Command : Type :=
   | axiom : String → Term → Command
   | check : Term → Command
   | eval : Term → Command
-
-
