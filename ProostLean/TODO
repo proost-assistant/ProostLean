@@ -7,12 +7,9 @@ soon-soon
 - add syntax for commands
 - test, a lot
 
-
 Soon-ish:
-- implement some axioms like True/False, Nat and Eq
 - add recursors' reduction in the reduction engine
 - finally finish CCobs somewhere ?
-
 
 Long run :
 - pattern-matching + exhaustiveness-check + termination-check

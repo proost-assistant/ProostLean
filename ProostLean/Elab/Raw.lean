@@ -15,4 +15,4 @@ inductive RawSyntax : Type :=
   | pi : String → RawSyntax → RawSyntax → RawSyntax
   | app : RawSyntax → RawSyntax → RawSyntax
   | let : String → Option RawSyntax → RawSyntax → RawSyntax → RawSyntax
-  --TODO add let
+  | ann : RawSyntax → RawSyntax → RawSyntax  
