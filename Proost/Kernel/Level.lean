@@ -1,14 +1,18 @@
+import Proost.Util.AppSep
+
 inductive Level : Type :=
   | zero : Level
-  | succ : Level → Level
+  | plus : Level → Nat → Level
   | max  : Level → Level → Level
   | imax : Level → Level → Level
   | var  : Nat   → Level
 deriving Repr, DecidableEq, Inhabited
 
+def Level.succ : Level → Level := (·.plus 1) 
+
 def Level.toNum? : Level → Option Nat
   | zero => some 0
-  | succ n => n.toNum?.map .succ
+  | plus l n => l.toNum?.map (· + n)
   | max l₁ l₂ => do pure $ Nat.max (← l₁.toNum?) (← l₂.toNum?)
   | imax l₁ l₂ =>
     if let some 0 := l₂.toNum? then some 0
@@ -19,7 +23,7 @@ def Level.toString (l : Level): String :=
   if let some n := l.toNum? then s!"{n}"
   else match l with
   | zero => unreachable!
-  | succ l => l.toString ++ "+1"
+  | plus l n => l.toString ++ s!"+ {n}"
   | var i => "u" ++ ToString.toString i
   | max l1 l2 => "max (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
   | imax l1 l2 => "imax (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
@@ -34,12 +38,7 @@ instance : OfNat Level n := ⟨
 ⟩
 
 @[match_pattern]
-instance : HAdd Level Nat Level := ⟨
-  let rec foo (l : Level): Nat → Level
-    | 0 => l
-    | n+1 => foo l.succ n
-  foo
-⟩
+instance : HAdd Level Nat Level := ⟨Level.plus⟩
 
 inductive State : Type :=
   | true
@@ -56,38 +55,45 @@ namespace Level
 partial def normalize (self: Level) : Level := match self with
   | imax u v =>
     if u = v then u else
-    match v with
+    match normalize v with
       | zero => v
-      | succ _ => normalize (u.max v)
-      | imax _ vw => max (u.imax vw) v
-      | max vv vw => max (u.imax vv) $ u.imax vw
+      | plus _  (_+1) => normalize (u.max v)
+      | imax _ vw => normalize $ max (u.imax vw) v
+      | max vv vw => normalize $ max (u.imax vv) $ u.imax vw
       | _ => self
   | max u v =>
     if u = v then u else
     match u,v with
       | 0, _ => v
       | _,0 => u
-      | succ uu, succ vv => (uu.max vv).succ
+      | plus uu n₁, plus vv n₂ => 
+        let n := min n₁ n₂
+        ((plus uu $ n₁-n).max (plus vv $ n₂-n)).plus n
       | _,_ => self
+  | plus l 0 => normalize l
+  | plus l₁ n₁ =>
+    if let plus l₂ n₂ := normalize l₁ then
+      plus l₂ (n₁+n₂)
+    else self
   | _ => self
 
 def n_of_univ : Level → Nat 
   | zero => 0
-  | succ l => l.n_of_univ
+  | plus l _ => l.n_of_univ
   | max l₁ l₂
   | imax l₁ l₂ => Max.max l₁.n_of_univ l₂.n_of_univ
   | var k => k
 
 def substitute_single (l : Level) (n : Nat) (u : Level):  Level := match l with
   | zero => zero
-  | succ l => succ $ l.substitute_single n u
+  | plus l n₂ => plus £ l.substitute_single n u £ n₂
   | max l₁ l₂ => l₁.substitute_single n u |>.max $ l₂.substitute_single n u
   | imax l₁ l₂ => l₁.substitute_single n u |>.imax $ l₂.substitute_single n u
   | var k => if k=n then u else l
 
 def substitute (l : Level) (univs : Array Level):  Level := match l with
   | zero => zero
-  | succ l => succ $ l.substitute univs
+  | plus l n => plus £ l.substitute univs £ n
   | max l₁ l₂ => l₁.substitute univs |>.max $ l₂.substitute univs
   | imax l₁ l₂ => l₁.substitute univs |>.imax $ l₂.substitute univs
   | var k => univs[k]!
@@ -101,10 +107,10 @@ partial def geq_no_subst (lhs rhs : Level) (n : Int) : State := Id.run do
     return .true
   if lhs=rhs && n>=0 then
     return .true
-  if let .succ lhs := lhs then
-    return lhs.geq_no_subst rhs (n-1)
-  if let .succ rhs := rhs then
-    return lhs.geq_no_subst rhs (n+1)
+  if let .plus lhs k := lhs then
+    return lhs.geq_no_subst rhs (n-k)
+  if let .plus rhs k := rhs then
+    return lhs.geq_no_subst rhs (n+k)
 
   --max split cases
   if let .max l₁ l₂ := rhs then
@@ -134,7 +140,6 @@ def is_eq (lhs rhs : Level) : Bool := lhs.geq rhs 0 && rhs.geq lhs 0
 
 instance : BEq Level := ⟨is_eq⟩
 
-#eval (2 : Level) == 0
 end Level
 
 
