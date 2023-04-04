@@ -1,7 +1,7 @@
-import ProostLean.Kernel.Level
-import ProostLean.Kernel.Term
-import ProostLean.Kernel.Nbe
-import ProostLean.Util.Misc
+import Proost.Kernel.Level
+import Proost.Kernel.Term
+import Proost.Kernel.Nbe
+import Proost.Util.Misc
 
 set_option autoImplicit false
 open GetType

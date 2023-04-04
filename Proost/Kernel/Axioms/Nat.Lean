@@ -1,4 +1,4 @@
-import ProostLean.Kernel.Core
+import Proost.Kernel.Core
 
 open Term
 

@@ -1,6 +1,6 @@
-import ProostLean.Kernel.Level
+import Proost.Kernel.Level
 import Std.Data.HashMap
-import ProostLean.Util.Misc
+import Proost.Util.Misc
 
 open Std
 

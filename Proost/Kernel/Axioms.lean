@@ -1,4 +1,4 @@
-import ProostLean.Kernel.Axioms.Eq
+import Proost.Kernel.Axioms.Eq
 
 @[inline]
 def axioms : List Axiom :=

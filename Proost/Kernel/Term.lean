@@ -1,5 +1,5 @@
-import ProostLean.Kernel.Level
-import ProostLean.Kernel.Core
+import Proost.Kernel.Level
+import Proost.Kernel.Core
 
 namespace Term
 

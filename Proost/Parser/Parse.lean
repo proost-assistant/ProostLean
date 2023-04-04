@@ -1,6 +1,6 @@
-import ProostLean.Util.Queue
-import ProostLean.Elab
-import ProostLean.Parser.Syntax
+import Proost.Util.Queue
+import Proost.Elab
+import Proost.Parser.Syntax
 import Lean
 
 open Queue

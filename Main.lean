@@ -1,4 +1,4 @@
-import ProostLean
+import Proost
 open Lean
 
 def main : IO Unit :=

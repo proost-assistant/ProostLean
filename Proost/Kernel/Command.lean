@@ -1,4 +1,4 @@
-import ProostLean.Kernel.TypeChecker
+import Proost.Kernel.TypeChecker
 
 def evalCommand (con : Context): Command → TCEnv Unit
   | .def s ty te => do

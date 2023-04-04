@@ -1,12 +1,12 @@
 import Lake
 open Lake DSL
 
-package proostLean 
+package proost
 
-lean_lib ProostLean 
+lean_lib Proost
 
 @[default_target]
-lean_exe proostLean where
+lean_exe proost where
   root := `Main
 
 require std from git "https://github.com/leanprover/std4" @ "main"

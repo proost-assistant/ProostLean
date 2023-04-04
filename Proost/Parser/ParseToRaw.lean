@@ -1,5 +1,5 @@
-import ProostLean.Parser.Syntax
-import ProostLean.Elab.Raw
+import Proost.Parser.Syntax
+import Proost.Elab.Raw
 import Lean
 
 open Lean Elab Meta
