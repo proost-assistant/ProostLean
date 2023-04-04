@@ -1,6 +1,5 @@
 soon-soon
 - parse to raw syntax instead of core syntax
-- parse universes
 - enable universe substitution
 - enable back proof-irrelevance
 - make the right monad for command elaboration
