@@ -26,3 +26,5 @@ def false_rec : Axiom :=
       $ var 2
   }
 
+def logic_axioms : List Axiom :=
+  [true_,tt,false_,false_rec]

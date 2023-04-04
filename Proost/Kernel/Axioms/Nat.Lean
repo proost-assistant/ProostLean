@@ -29,8 +29,11 @@ def nat_rec : Axiom :=
       $ app (var 4) (var 1)
   }
 
-def reduce_nat_rec : Value → Option Value 
+/-def reduce_nat_rec : Value → Option Value 
   | .neutral (.ax nat_rec) l::[P,P_zero,P_succ,n] => 
     match n with
       | .neutral (.ax zero) []  => some P_zero
-      | .neutral (.ax succ) [n] => 
+      | .neutral (.ax succ) [n] => -/
+
+def nat_axioms : List Axiom :=
+  [nat,zero,succ,nat_rec]

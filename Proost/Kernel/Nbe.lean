@@ -1,14 +1,13 @@
 import Proost.Kernel.Core
 import Proost.Kernel.Term
-import Proostlean.Kernel.Axioms
+import Proost.Kernel.Axioms
 
 mutual
 
   partial def AppClosure.app (closure : AppClosure Value) (arg : Value) : TCEnv Value :=
     closure.term.eval (arg::closure.closure)
 
-  partial def Term.eval (closure : List Value := []): Term → TCEnv Value :=
-    fun x => do
+  partial def Term.eval (closure : List Value := []) (x : Term): TCEnv Value := do
     add_trace s!"evaluating {x} in closure {closure}"
     match x with
     | .ann t _ => t.eval closure
