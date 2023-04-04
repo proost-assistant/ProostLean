@@ -128,14 +128,5 @@ end
 
 #eval is_def_eq (.sort 1) (.sort 2) default
 #eval check (.abs (some $ .sort 1) $ .abs (some $ .sort 2) $ .var 1) (.prod (.sort 1) $ .prod (.sort 1) (.sort 1)) default |>.get.trace
-/-
-["Π Sort 1.Sort 1 and Π Sort 1.Π Sort 1.Sort 1 are not definitionally equal", "checking Sort 0 : Sort 1",
- "inferred 0 : Sort 1", "trying to infer the type of 0", "inferred Sort 1 : Sort 2",
- "trying to infer the type of Sort 1", "trying to infer the type of λ Sort 1 => 0", "inferred Sort 1 : Sort 2",
- "trying to infer the type of Sort 1", "trying to infer the type of λ Sort 1 => λ Sort 1 => 0",
- "checking (λ Sort 1 => λ Sort 1 => 0) (Sort 0) : Π Sort 1.Π Sort 1.Sort 1"]
-
--/
-
 
 end Term

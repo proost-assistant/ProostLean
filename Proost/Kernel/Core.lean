@@ -41,11 +41,6 @@ def Term.toString : Term → String
 
 instance : ToString Term := ⟨Term.toString⟩
 
-
-
-
-
-
 structure Axiom where
   name : String
   type : Term
