@@ -24,4 +24,5 @@ inductive RawCommand : Type :=
   | eval : RawTerm → RawCommand
 
 inductive RawError : Type :=
+  | duplicateUniverseVar : String → RawError
   | unboundLevelVar : String → RawError

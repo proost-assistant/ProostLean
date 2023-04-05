@@ -1,6 +1,7 @@
 import Proost.Elab.Raw
 import Proost.Kernel.Level
 import Proost.Kernel.Core
+import Proost.Kernel.Command
 import Proost.Util.AppSep
 import Proost.Util.Queue
 
@@ -53,28 +54,56 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       if x != "_" then modify (·.push x)
       let t ← t.toCore
       return .abs ty t
-    | varconst s none => 
-      let some posx := (← get).position s | return .const s #[]
-      return .var posx
-    | varconst s (some l) =>
-      let l := List.foldlM (λ acc x => do return (← liftM $ RawLevel.toCore x)::acc) [] l
-      let arr := Array.mk (← l)
+    | varconst s arr =>
+      let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
       return .const s arr
     | «let» x ty t body => 
-      let ty ← do
-        if let some ty := ty.map $ (RawTerm.toCore)
-        then
-          let ty ← ty
-          pure $ some ty
-        else pure none
+      let ty ← ty.mapM RawTerm.toCore
       let t ← t.toCore
       if x != "_" then modify (·.push x)
       let body ← body.toCore
       return .app (.abs ty body) t
 
+abbrev RawCommandEnv := Except RawError
+
+#reduce EStateM.Result RawError (Queue String) Term 
+
+instance : Coe (EStateM.Result ε σ α) (Except ε α) where
+  coe 
+    | .ok x _ => .ok x
+    | .error e _ => .error e
+
+def map_univs : List String → EStateM RawError (HashMap String Nat) Unit
+    | [] => return
+    | h::t => do 
+      if let some _ := (← get).find? h then
+        throw $ .duplicateUniverseVar h
+      else 
+        modify (λ hm => HashMap.insert hm h hm.size.succ)
+        map_univs t
 
 
+def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
+  match t with
+    | .def s l ty t =>
+      let hm ← match map_univs l default with
+        | .ok () hm => pure hm
+        | .error e _ => throw e
+      let ty ← Option.mapM (RawTerm.toCore · hm default) ty
+      let t ← RawTerm.toCore t hm default
+      return .def s hm.size ty t
 
+    | .axiom s l ty =>       
+      let hm ← match map_univs l default with
+        | .ok () hm => pure hm
+        | .error e _ => throw e
+      let ty ← RawTerm.toCore ty hm default
+      return .axiom s hm.size ty
 
-    
+    | .eval t => 
+      let t ← RawTerm.toCore t default default
+      return .eval t
 
+    | .check t => 
+      let t ← RawTerm.toCore t default default
+      return .check t

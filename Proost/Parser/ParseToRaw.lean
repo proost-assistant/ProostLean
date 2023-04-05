@@ -30,8 +30,6 @@ partial def elabLevel (stx : TSyntax `proost_level) : MetaM Expr := do
 
   | _ => do println! stx; throwUnsupportedSyntax
 
-elab "test_elab_level" e:proost_level : term => elabLevel e
-
 partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
   match stx with
 
@@ -81,10 +79,6 @@ partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
         
   | _ => do println! stx; throwUnsupportedSyntax
 
-elab "test_elab" e:proost : term => elabProost e
-
-#check test_elab fun x y : Foo, z : Bar => (x : Foo)
-
 partial def elabCommand (stx : TSyntax `proost_command) : MetaM Expr := do
   match stx with
   | `(proost_command| def $s $[.{ $l:ident ,* }]? $[: $ty]? := $t) =>
@@ -114,6 +108,6 @@ partial def elabCommand (stx : TSyntax `proost_command) : MetaM Expr := do
   
   | _ => do println! stx; throwUnsupportedSyntax
 
+elab "test_elab_level" e:proost_level : term => elabLevel e
+elab "test_elab_term" e:proost : term => elabProost e
 elab "test_elab_cmd" e:proost_command : term => elabCommand e
-
-#check test_elab_cmd def foo.{u} : Foo := Bar
