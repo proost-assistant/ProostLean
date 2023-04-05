@@ -48,17 +48,15 @@ partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
         else pure Array.empty
       mkAppM `RawTerm.varconst #[mkStrLit x.getId.toString, ← mkAppM `Array.mk #[← mkListLit (mkConst `RawLevel) $ arr.toList] ]
     
-
   | `(proost| ($t : $ty)) => do
       let t ← elabProost t
       let ty ← elabProost ty 
       mkAppM `RawTerm.ann #[t,ty]
 
   | `(proost| fun $x:ident $[: $A:proost]? => $B) => do
-        let A ←  
-            if let some A := A then
-                mkAppM `Option.some #[ ← elabProost A]
-            else mkAppOptM `Option.none #[some $ mkConst `RawTerm]
+        let A ← do
+            let some A := A | mkAppOptM `Option.none #[some $ mkConst `RawTerm]
+            mkAppM `Option.some #[ ← elabProost A]
         let B ← elabProost B
         mkAppM `RawTerm.lam #[mkStrLit x.getId.toString, A, B]
 
@@ -86,3 +84,36 @@ partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
 elab "test_elab" e:proost : term => elabProost e
 
 #check test_elab fun x y : Foo, z : Bar => (x : Foo)
+
+partial def elabCommand (stx : TSyntax `proost_command) : MetaM Expr := do
+  match stx with
+  | `(proost_command| def $s $[.{ $l:ident ,* }]? $[: $ty]? := $t) =>
+      let l ← do
+        let some l := l | mkListLit (mkConst `String) .nil
+        mkListLit (mkConst `String) $ l.getElems.toList.map (λ x => mkStrLit (TSyntax.getId x).toString)
+      let ty ← do
+        let some ty := ty | mkAppOptM `Option.none #[some $ mkConst `RawTerm]
+        mkAppM `Option.some #[ ← elabProost ty]
+      let t ← elabProost t
+      mkAppM `RawCommand.def #[mkStrLit s.getId.toString, l, ty, t]
+
+  | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) => 
+      let l ← do
+        let some l := l | mkListLit (mkConst `String) .nil
+        mkListLit (mkConst `String) $ l.getElems.toList.map (λ x => mkStrLit (TSyntax.getId x).toString)
+      let ty ← elabProost ty
+      mkAppM `RawCommand.axiom #[mkStrLit s.getId.toString, l, ty]
+
+  | `(proost_command| check $t) => 
+      let t ← elabProost t 
+      mkAppM `RawCommand.check #[t]
+
+  | `(proost_command| eval $t) => 
+      let t ← elabProost t 
+      mkAppM `RawCommand.eval #[t]
+  
+  | _ => do println! stx; throwUnsupportedSyntax
+
+elab "test_elab_cmd" e:proost_command : term => elabCommand e
+
+#check test_elab_cmd def foo.{u} : Foo := Bar

@@ -18,8 +18,8 @@ inductive RawTerm : Type :=
   | ann : RawTerm → RawTerm → RawTerm  
 
 inductive RawCommand : Type :=
-  | def : String → Array String → Option RawTerm → RawTerm → RawCommand
-  | axiom : String → Array String → RawTerm → RawCommand
+  | def : String → List String → Option RawTerm → RawTerm → RawCommand
+  | axiom : String → List String → RawTerm → RawCommand
   | check : RawTerm → RawCommand
   | eval : RawTerm → RawCommand
 

@@ -27,7 +27,6 @@ instance :  MonadLiftT RawLevelEnv RawTermEnv where
   monadLift {α} (a : RawLevelEnv α) := do
     fun h => liftExcept (a h)
 
-
 partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
   match t with
     | prop | sort none => 
