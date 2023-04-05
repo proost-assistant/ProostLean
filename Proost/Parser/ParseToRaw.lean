@@ -39,28 +39,28 @@ partial def elabLevel (stx : TSyntax `proost_level) : MetaM Expr := do
 partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
   match stx with
 
-  | `(Prop) => pure $ mkConst `RawSyntax.prop
+  | `(Prop) => pure $ mkConst `RawTerm.prop
 
-  | `(proost| Type $l) => mkAppM `RawSyntax.type #[← elabLevel l]
+  | `(proost| Type $l) => mkAppM `RawTerm.type #[← elabLevel l]
 
-  | `(proost| Sort $l) => mkAppM `RawSyntax.sort #[← elabLevel l]
+  | `(proost| Sort $l) => mkAppM `RawTerm.sort #[← elabLevel l]
 
   | `(proost| $x:ident ) => 
       --TODO make parser for universe-polymorphic calls
-      mkAppM `RawSyntax.varconst #[mkStrLit x.getId.toString, ← mkAppOptM `Option.none #[some $ ← mkAppM `List #[(mkConst `RawLevel)]]]
+      mkAppM `RawTerm.varconst #[mkStrLit x.getId.toString, ← mkAppOptM `Option.none #[some $ ← mkAppM `List #[(mkConst `RawLevel)]]]
 
   | `(proost| ($t : $ty)) => do
       let t ← elabProost t
       let ty ← elabProost ty 
-      mkAppM `RawSyntax.ann #[t,ty]
+      mkAppM `RawTerm.ann #[t,ty]
 
   | `(proost| fun $x:ident $[: $A:proost]? => $B) => do
         let A ←  
             if let some A := A then
                 mkAppM `Option.some #[ ← elabProost A]
-            else mkAppOptM `Option.none #[some $ mkConst `RawSyntax]
+            else mkAppOptM `Option.none #[some $ mkConst `RawTerm]
         let B ← elabProost B
-        mkAppM `RawSyntax.lam #[mkStrLit x.getId.toString, A, B]
+        mkAppM `RawTerm.lam #[mkStrLit x.getId.toString, A, B]
 
   | `(proost| fun $x $y * $[: $A:proost]? => $B) => do
         elabProost $ ←`(proost| fun $x $[: $A]? => fun $y* $[: $A]? => $B)
@@ -71,12 +71,12 @@ partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
   | `(proost| $A -> $B) => do
         let A ← elabProost A  
         let B ← elabProost B
-        mkAppM `RawSyntax.prod #[mkStrLit "_", A, B]
+        mkAppM `RawTerm.prod #[mkStrLit "_", A, B]
 
   | `(proost| ($x:ident : $A ) -> $B ) => do
         let A ← elabProost A  
         let B ← elabProost B
-        mkAppM `RawSyntax.prod #[mkStrLit x.getId.toString, A, B]
+        mkAppM `RawTerm.prod #[mkStrLit x.getId.toString, A, B]
 
   | `(proost| ($x:ident $y * : $A ) -> $B) => do
         elabProost $ ←`(proost| ($x : $A) -> ($y * : $A) -> $B)
@@ -85,4 +85,4 @@ partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
 
 elab "test_elab" e:proost : term => elabProost e
 
-#check test_elab fun x y => (x : Foo)
+#check test_elab fun x y : Foo, z : Bar => (x : Foo)
