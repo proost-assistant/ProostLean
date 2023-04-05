@@ -98,7 +98,7 @@ abbrev TypedTerm := Term × Term
 inductive TCError : Type :=
   | unboundDeBruijnIndex : Nat → List Term → TCError
   | unknownConstant : String → TCError
-  | notUniverse : Term → TCError
+  | notASort : Term → TCError
   | notDefEq : Term → Term → TCError
   | wrongArgumentType : Term → Term → TypedTerm → TCError
   | notAFunction : Value → Value → TCError
@@ -114,7 +114,7 @@ instance : ToString TCError where
   toString
     | .unboundDeBruijnIndex n con => s!"unbound De Bruijn index {n} in context {con}"
     | .unknownConstant c => s!"unknown constant {c}"
-    | .notUniverse t => s!"expected a sort, found {t}"
+    | .notASort t => s!"expected a sort, found {t}"
     | .notDefEq t₁ t₂ => s!"{t₁} and {t₂} are not definitionally equal"
     | .wrongArgumentType f exp (t,ty)=> s!"function {f} expects an argument of type {exp}, received argument {t} of type {ty}"
     | .cannotInfer t => s!"cannot infer type of term {t}"
@@ -131,11 +131,16 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
 def add_trace (tr : String): TCEnv Unit :=
     modify $ λ con => {con with trace := tr :: con.trace}
 
-def add_axiom (a : Axiom) : TCEnv Unit := do
-    let name := a.name
+def add_const (name : String) (c : Const) : TCEnv Unit := do
     if let some _ := (← get).const_con.find? name then
       throw $  .alreadyDefined name
-    modify $ λ con => {con with const_con := HashMap.insert con.const_con name $ .ax a}
+    modify $ λ con => {con with const_con := HashMap.insert con.const_con name c}
+
+def add_decl (name : String) (d: Decl) : TCEnv Unit := 
+    add_const name $ .de d
+
+def add_axiom (a : Axiom) : TCEnv Unit := do
+    add_const a.name $ .ax a
 
 def add_axioms (a : List Axiom) : TCEnv Unit := do
   a.foldlM (fun _ ax => add_axiom ax) ()
@@ -176,7 +181,7 @@ def get_var_type (n:Nat) : TCEnv Term := do
 instance : GetType $ Nat := ⟨get_var_type⟩
 
 inductive Command : Type :=
-  | def : String → Option Term → Term → Command
-  | axiom : String → Term → Command
+  | def : String → Nat → Option Term → Term → Command
+  | axiom : String → Nat → Term → Command
   | check : Term → Command
   | eval : Term → Command

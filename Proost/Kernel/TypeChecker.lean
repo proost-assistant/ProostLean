@@ -60,8 +60,8 @@ def is_def_eq (lhs rhs : Term) : TCEnv Unit :=
 def imax (lhs rhs : Term) : TCEnv Term := do
   match lhs,rhs with
     | sort l₁, sort l₂ => return sort $ l₁.imax l₂
-    | sort _,_ => throw $ .notUniverse rhs
-    | _,_ => throw $ .notUniverse lhs
+    | sort _,_ => throw $ .notASort rhs
+    | _,_ => throw $ .notASort lhs
 
 mutual
 partial def infer (t : Term): TCEnv Term := do
@@ -83,7 +83,7 @@ partial def infer (t : Term): TCEnv Term := do
     if let sort _ := univ_t then
       add_var_to_context $ some t
       return t.prod $ ← u.infer
-    else throw $ .notUniverse univ_t
+    else throw $ .notASort univ_t
 
   | app t u => do
     let type_t ← (← t.infer).whnf
@@ -96,7 +96,7 @@ partial def infer (t : Term): TCEnv Term := do
    add_trace s!"inferred {t} : {res}"
    return res
 
-partial def check (t ty : Term ):  TCEnv Unit := do
+partial def check (t ty : Term):  TCEnv Unit := do
   add_trace s!"checking {t} : {ty}"
   match t,ty with
   | .abs none body, .prod a b => do
@@ -125,6 +125,14 @@ partial def check (t ty : Term ):  TCEnv Unit := do
     let tty ← infer t
     is_def_eq ty tty
 end
+
+def is_sort (t :Term): TCEnv Unit := do
+  let .sort _ := t | throw $ .notASort t
+  return
+
+def is_type (t : Term): TCEnv Unit := do
+  let ty ← infer t
+  is_sort ty
 
 #eval is_def_eq (.sort 1) (.sort 2) default
 #eval check (.abs (some $ .sort 1) $ .abs (some $ .sort 2) $ .var 1) (.prod (.sort 1) $ .prod (.sort 1) (.sort 1)) default |>.get.trace

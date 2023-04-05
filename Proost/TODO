@@ -1,7 +1,5 @@
 soon-soon
-- enable universe substitution
 - enable back proof-irrelevance
-- make the right monad for command elaboration
 - add syntax for commands
 - test, a lot
 
