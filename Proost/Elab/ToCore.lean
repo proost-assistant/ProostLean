@@ -23,6 +23,10 @@ def RawLevel.toCore (l : RawLevel) : RawLevelEnv Level := do
 
 abbrev RawTermEnv := ReaderT (HashMap String Nat) $ EStateM RawError (Queue String)
 
+instance :  MonadLiftT RawLevelEnv RawTermEnv where
+  monadLift {α} (a : RawLevelEnv α) := do
+    fun h => liftExcept (a h)
+
 
 partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
   match t with
@@ -58,8 +62,10 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
     | varconst s none => 
       let some posx := (← get).position s | return .const s #[]
       return .var posx
-    | varconst _ (some _) =>
-      todo!
+    | varconst s (some l) =>
+      let l := List.foldl (λ acc x => do return (← liftM $ RawLevel.toCore x)::(← acc)) (pure []) l
+      let arr := Array.mk (← l)
+      return .const s arr
     | «let» x ty t body => 
       let ty ← do
         if let some ty := ty.map $ (RawTerm.toCore)
