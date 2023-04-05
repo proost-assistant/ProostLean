@@ -46,24 +46,19 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       return .app (← f.toCore) (← x.toCore)
     | pi x t ty =>
       let t ← t.toCore
-      modify (·.push x)
+      if x != "_" then modify (·.push x)
       let ty ←  ty.toCore
       return .prod t ty
     | lam x ty t =>
-      let ty ← do
-        if let some ty := ty.map $ (RawTerm.toCore)
-        then
-          let ty ← ty
-          pure $ some ty
-        else pure none
-      modify (·.push x)
+      let ty ← ty.mapM RawTerm.toCore
+      if x != "_" then modify (·.push x)
       let t ← t.toCore
       return .abs ty t
     | varconst s none => 
       let some posx := (← get).position s | return .const s #[]
       return .var posx
     | varconst s (some l) =>
-      let l := List.foldl (λ acc x => do return (← liftM $ RawLevel.toCore x)::(← acc)) (pure []) l
+      let l := List.foldlM (λ acc x => do return (← liftM $ RawLevel.toCore x)::acc) [] l
       let arr := Array.mk (← l)
       return .const s arr
     | «let» x ty t body => 
@@ -74,7 +69,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
           pure $ some ty
         else pure none
       let t ← t.toCore
-      modify (·.push x)
+      if x != "_" then modify (·.push x)
       let body ← body.toCore
       return .app (.abs ty body) t
 

@@ -15,13 +15,8 @@ partial def elabLevel (stx : TSyntax `proost_level) : MetaM Expr := do
       elabLevel (←`(proost_level| $l))
   
   | `(proost_level| $l + $n) => 
-      let n := n.getNat
-      match n with
-        | 0 => elabLevel (←`(proost_level| $l))
-        | n+1 => 
-          let n := quote n
-          let l ← elabLevel (←`(proost_level| $l + $n))
-          mkAppM `RawLevel.succ #[l]
+        let l ← elabLevel l
+        mkAppM `RawLevel.plus #[l, mkNatLit n.getNat]
 
   |`(proost_level| max $l₁ $l₂) =>
       let l₁ ← elabLevel l₁
@@ -35,6 +30,7 @@ partial def elabLevel (stx : TSyntax `proost_level) : MetaM Expr := do
 
   | _ => do println! stx; throwUnsupportedSyntax
 
+elab "test_elab_level" e:proost_level : term => elabLevel e
 
 partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
   match stx with
@@ -45,9 +41,13 @@ partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
 
   | `(proost| Sort $l) => mkAppM `RawTerm.sort #[← elabLevel l]
 
-  | `(proost| $x:ident ) => 
-      --TODO make parser for universe-polymorphic calls
-      mkAppM `RawTerm.varconst #[mkStrLit x.getId.toString, ← mkAppOptM `Option.none #[some $ ← mkAppM `List #[(mkConst `RawLevel)]]]
+  | `(proost| $x:ident $[.{ $l:proost_level ,* }]?  ) => 
+      let arr ←  
+        if let some stx := l then
+            Array.mapM elabLevel stx
+        else pure Array.empty
+      mkAppM `RawTerm.varconst #[mkStrLit x.getId.toString, ← mkAppM `Array.mk #[← mkListLit (mkConst `RawLevel) $ arr.toList] ]
+    
 
   | `(proost| ($t : $ty)) => do
       let t ← elabProost t

@@ -17,4 +17,6 @@ def evalCommand (c : Command): TCEnv Unit := do
     let _ ← t.infer
     return
   | _ => return
-    
+
+def evalCommands (cs : Commands): TCEnv Unit := do
+  List.foldlM (λ () c => evalCommand c) () cs

@@ -185,3 +185,5 @@ inductive Command : Type :=
   | axiom : String → Nat → Term → Command
   | check : Term → Command
   | eval : Term → Command
+
+def Commands := List Command

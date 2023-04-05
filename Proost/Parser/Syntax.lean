@@ -7,11 +7,11 @@ syntax "max" proost_level (proost_level)+ : proost_level
 syntax "imax" proost_level (proost_level)+ : proost_level
 
 
-declare_syntax_cat constant
-syntax ident (".{" (proost_level),+ "}")? : constant
+declare_syntax_cat proost_constant
+syntax ident (".{" (proost_level),+ "}")? : proost_constant
 
 declare_syntax_cat proost
-syntax constant : proost
+syntax proost_constant : proost
 syntax "(" proost ")" : proost
 syntax "(" proost ":" proost ")" : proost
 syntax "fun" (ident* (":" proost)?),* "=>" proost : proost 
@@ -27,3 +27,8 @@ syntax "def" ident (".{" (ident),+ "}")? (":" proost)? ":=" proost : proost_comm
 syntax "axiom" ident (".{" (ident),+ "}")? ":" proost : proost_command
 syntax "eval" proost : proost_command
 syntax "check" proost : proost_command
+
+declare_syntax_cat proost_commands
+syntax command* : term
+
+

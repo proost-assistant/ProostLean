@@ -52,15 +52,10 @@ partial def read_back (size : Nat) : Value → TCEnv Term
     let ne : Term := match ne with
       | .ax a arr => .const a.name arr
       | .var x => .var x
-    List.foldl (λ acc x => do return .app (← acc) $ (← read_back size x))
-      (pure ne) spine
+    List.foldlM (λ acc x => do return .app acc $ (← read_back size x))
+      ne spine
   | .abs ty closure => do
-    let ty ←
-      if let some ty := ty.map (read_back size)
-      then
-        let ty ← ty
-        pure $ some ty
-      else pure none
+    let ty ← ty.mapM (read_back size)
     let body ← closure.app (.var size) >>= read_back (size+1)
     pure $ .abs ty body
   | .prod ty closure => do
