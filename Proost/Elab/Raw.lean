@@ -46,7 +46,7 @@ def RawTerm.toString : RawTerm → String
 instance : ToString RawTerm := ⟨RawTerm.toString⟩  
 
 inductive RawCommand : Type :=
-  | def : String → List String → Option RawTerm → RawTerm → RawCommand
+  | def : String → List String → Array (Array String × RawTerm) → Option RawTerm → RawTerm → RawCommand
   | axiom : String → List String → RawTerm → RawCommand
   | check : RawTerm → RawCommand
   | eval : RawTerm → RawCommand
@@ -54,8 +54,8 @@ deriving Repr
 
 instance : ToString RawCommand where
   toString 
-    | .def s _ none t => s!"def {s} := {t}"
-    | .def s _ (some ty) t => s!"def {s} : {ty} := {t}"
+    | .def s _ _todo none t => s!"def {s} := {t}"
+    | .def s _ _todo (some ty) t => s!"def {s} : {ty} := {t}"
     | .axiom s _ ty => s!"axiom {s} : {ty}"
     | .check t => s!"check {t}"
     | .eval t => s!"eval {t}"

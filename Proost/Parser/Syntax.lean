@@ -34,7 +34,7 @@ macro_rules
 
 
 declare_syntax_cat proost_command
-syntax "def" ident (".{" (ident),+ "}")? (":" proost)? ":=" proost : proost_command
+syntax "def" ident (".{" (ident),+ "}")? ("("ident+ ":" proost")")* (":" proost)? ":=" proost : proost_command
 syntax "axiom" ident (".{" (ident),+ "}")? ":" proost : proost_command
 syntax "eval" proost : proost_command
 syntax "check" proost : proost_command

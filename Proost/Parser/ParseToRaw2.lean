@@ -98,13 +98,14 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
 
 partial def elabCommand (stx : TSyntax `proost_command) : Except String RawCommand := do
   match stx with
-  | `(proost_command| def $s $[.{ $l:ident ,* }]? $[: $ty]? := $t) =>
+  | `(proost_command| def $s $[.{ $l:ident ,* }]? $[($args * : $args_ty)]* $[: $ty]? := $t) =>
       let l := Id.run do
         let some l := l | []
         l.getElems.map (·.getId.toString) |>.toList
       let ty ← ty.mapM elabProost
       let t ← elabProost t
-      return .def s.getId.toString l ty t
+      -- parse arguments
+      return .def s.getId.toString l #[] ty t
 
   | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) => 
       let l := Id.run do

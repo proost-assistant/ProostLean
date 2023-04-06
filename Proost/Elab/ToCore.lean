@@ -89,7 +89,7 @@ def map_univs : List String → EStateM RawError (HashMap String Nat) Unit
 
 def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
   match t with
-    | .def s l ty t =>
+    | .def s l _todo ty t =>
       let hm ← match map_univs l default with
         | .ok () hm => pure hm
         | .error e _ => throw e
