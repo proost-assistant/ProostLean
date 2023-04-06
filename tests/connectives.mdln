@@ -1,2 +1,2 @@
-def And : (A : Prop) -> (B : Prop) -> Prop := fun A => fun B => (C: Prop) -> (A -> B -> C) -> C
+def And : (A B : Prop) -> Prop := fun A B => (C: Prop) -> (A -> B -> C) -> C
 

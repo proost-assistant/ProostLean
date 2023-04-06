@@ -1,5 +1,6 @@
 import Proost.Parser.Syntax
 import Proost.Elab.Raw
+import Proost.Util.Misc
 import Lean
 
 open Lean Elab Meta
@@ -32,11 +33,11 @@ partial def elabLevel (stx : TSyntax `proost_level) : Except String RawLevel := 
 partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
   match stx with
 
-  | `(proost|Prop) => return .prop
+  | `(proost| Prop) => return .prop
 
-  | `(proost|Type) => return .type none
+  | `(proost| Type) => return .type none
 
-  | `(proost|Sort) => return .sort none
+  | `(proost| Sort) => return .sort none
 
   | `(proost| Type $l) => return .type (← elabLevel l)
 
@@ -66,11 +67,17 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
         let B ← elabProost B
         return .lam x.getId.toString A B
 
-  --| `(proost| fun $x $y * $[: $A:proost]? => $B) => do
-  --      elabProost $ ←`(proost| fun $x $[: $A]? => fun $y* $[: $A]? => $B)
---
-  --| `(proost| fun $x * $[: $A]?,  $[$y * : $B],* => $C) => do
-  --    elabProost $ ←`(proost| fun $x * $[: $A]? => fun $[$y* : $B],* => $C)
+  | `(proost| fun $[$y * $[: $A]?],* => $B) => do
+        let A ← A.mapM (Option.mapM elabProost)  
+        let mut res ← elabProost B
+        for i in [1:y.size+1] do
+          let cur := y.size-i
+          let ty := A[cur]!
+          for j in [1:y[cur]!.size+1] do
+            let sub := y[cur]!.size - j
+            let x := y[cur]![sub]!.getId.toString
+            res ← pure $ .lam x ty res
+        return res
       
   | `(proost| $A -> $B) => do
         let A ← elabProost A  
@@ -82,8 +89,10 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
         let B ← elabProost B
         return .pi x.getId.toString A B
 
-  --| `(proost| ($x:ident $y * : $A ) -> $B) => do
-  --      elabProost $ ←`(proost| ($x : $A) -> ($y * : $A) -> $B)
+  | `(proost| ($y * : $A ) -> $B) => do
+        let A ← elabProost A  
+        let B ← elabProost B
+        y.foldrM (λ x t => return .pi x.getId.toString A t) B
         
   | _ => throw s!"unknown term syntax: {stx}"
 

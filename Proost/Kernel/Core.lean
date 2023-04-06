@@ -187,4 +187,12 @@ inductive Command : Type :=
   | eval : Term → Command
 deriving Repr
 
+instance : ToString Command where
+  toString 
+    | .def s _ none t => s!"def {s} := {t}"
+    | .def s _ (some ty) t => s!"def {s} : {ty} := {t}"
+    | .axiom s _ ty => s!"axiom {s} : {ty}"
+    | .check t => s!"check {t}"
+    | .eval t => s!"eval {t}"
+
 abbrev Commands := List Command
