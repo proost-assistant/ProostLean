@@ -23,4 +23,4 @@ def main : List String → IO Unit
     type_check_file h
     main t
 
-#eval main ["tests\\connectives.mdln"]
+--#eval main ["tests\\connectives.mdln"]

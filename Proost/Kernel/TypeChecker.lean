@@ -41,21 +41,21 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
     return true
 
   match lhs,rhs with
-    | .sort l₁, .sort l₂ => pure $ l₁ == l₂
+    | .sort l₁, .sort l₂ => 
+      add_trace "checking {l₁} = {l₂}"
+      pure $ l₁.is_eq l₂
     | .var i, .var j => pure $ i == j
     | .abs _ t₁, .abs _ t₂ => conversion t₁ t₂
     | .prod t₁ u₁, .prod t₂ u₂
     | .app t₁ u₁, .app t₂ u₂ => return (←conversion t₁ t₂) && (← conversion u₁ u₂)
     | _,_ => pure false
 
-#eval Term.conversion (.abs none $ .var 0) (.app (.abs none $ .abs none $ .var 0) (.sort 0)) default
-
 namespace Term
-
 
 def is_def_eq (lhs rhs : Term) : TCEnv Unit :=
   unless lhs == rhs do
   throw $ .notDefEq lhs rhs
+
 
 def imax (lhs rhs : Term) : TCEnv Term := do
   match lhs,rhs with
@@ -133,8 +133,5 @@ def is_sort (t :Term): TCEnv Unit := do
 def is_type (t : Term): TCEnv Unit := do
   let ty ← infer t
   is_sort ty
-
-#eval is_def_eq (.sort 1) (.sort 2) default
-#eval check (.abs (some $ .sort 1) $ .abs (some $ .sort 2) $ .var 1) (.prod (.sort 1) $ .prod (.sort 1) (.sort 1)) default |>.get.trace
 
 end Term

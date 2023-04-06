@@ -36,7 +36,7 @@ mutual
         if let some val := closure.get? x
           then return val
         else
-          add_trace s!"unbound index {x} with closure {closure}"
+          dbg_trace s!"unbound index {x} with closure {closure}"
           return .neutral (.var x) []
     | .const s arr => do
         let res := (← get).const_con.find? s

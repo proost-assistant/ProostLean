@@ -87,9 +87,9 @@ abbrev ConstContext := HashMap String Const
 abbrev VarContext := Array $ Option Term
 
 structure TCContext where
-  trace     : List String
   const_con : ConstContext
   var_cont : VarContext
+  debug : Bool := false
 deriving Inhabited
 
 
@@ -115,7 +115,7 @@ instance : ToString TCError where
     | .unboundDeBruijnIndex n con => s!"unbound De Bruijn index {n} in context {con}"
     | .unknownConstant c => s!"unknown constant {c}"
     | .notASort t => s!"expected a sort, found {t}"
-    | .notDefEq t₁ t₂ => s!"{t₁} and {t₂} are not definitionally equal"
+    | .notDefEq t₁ t₂ => s!"{repr t₁} and {repr t₂} are not definitionally equal"
     | .wrongArgumentType f exp (t,ty)=> s!"function {f} expects an argument of type {exp}, received argument {t} of type {ty}"
     | .cannotInfer t => s!"cannot infer type of term {t}"
     | _ => todo!
@@ -128,8 +128,8 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
   | .ok _ st
   | .error _ st => st
 
-def add_trace (tr : String): TCEnv Unit :=
-    modify $ λ con => {con with trace := tr :: con.trace}
+def add_trace (tr : String): TCEnv Unit := do
+    if (← get).debug then dbg_trace tr
 
 def add_const (name : String) (c : Const) : TCEnv Unit := do
     if let some _ := (← get).const_con.find? name then
@@ -147,7 +147,7 @@ def add_axioms (a : List Axiom) : TCEnv Unit := do
 
 instance (priority := high) : MonadExceptOf TCError TCEnv where
   throw err := do
-    add_trace $ toString err
+    dbg_trace s!"{err}"
     throw err
   tryCatch := tryCatch
 

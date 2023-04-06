@@ -54,7 +54,7 @@ partial def normalize (self: Level) : Level := match self with
   | imax u v =>
     if u = v then u else
     match normalize v with
-      | 0 => v
+      | 0 => 0
       | plus _  (_+1) => normalize (u.max v)
       | imax _ vw => normalize $ max (u.imax vw) v
       | max vv vw => normalize $ max (u.imax vv) $ u.imax vw
@@ -97,10 +97,8 @@ def substitute (l : Level) (univs : Array Level):  Level := match l with
   | var k => univs[k]!
 
 partial def geq_no_subst (lhs rhs : Level) (n : Int) : State := Id.run do
-
   let lhs := normalize lhs
   let rhs := normalize rhs
-
   if let 0 := lhs then if n >= 0 then
     return .true
   if lhs=rhs && n>=0 then

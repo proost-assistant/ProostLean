@@ -9,4 +9,9 @@ lean_lib Proost
 lean_exe proost where
   root := `Main
 
+@[default_target]
+lean_exe debug where
+  root := `Main
+  buildType := .debug
+
 require std from git "https://github.com/leanprover/std4" @ "main"
