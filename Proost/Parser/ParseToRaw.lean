@@ -31,6 +31,7 @@ partial def elabLevel (stx : TSyntax `proost_level) : MetaM Expr := do
   | _ => do println! stx; throwUnsupportedSyntax
 
 partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
+  println! s!"parsing term {stx}"
   match stx with
 
   | `(Prop) => pure $ mkConst `RawTerm.prop
@@ -108,6 +109,44 @@ partial def elabCommand (stx : TSyntax `proost_command) : MetaM Expr := do
   
   | _ => do println! stx; throwUnsupportedSyntax
 
+
+partial def elabCommands (stx : TSyntax `proost_commands) : MetaM Expr := do
+   match stx with
+  | `(proost_commands| $c:proost_command) => 
+      println! s!"parsing command {c}"
+      let c ← elabCommand c
+      mkListLit (mkConst `RawCommand) [c]
+  | `(proost_commands| $c:proost_command $cl*) => 
+      println! s!"parsing command {c}"
+      let c ← elabCommand c
+      let cl ← elabCommands $ ←`(proost_commands| $[$cl]* )
+      mkAppM `List.cons #[c,cl]    
+  | _ => do println! stx; throwUnsupportedSyntax
+
 elab "test_elab_level" e:proost_level : term => elabLevel e
 elab "test_elab_term" e:proost : term => elabProost e
 elab "test_elab_cmd" e:proost_command : term => elabCommand e
+
+elab "elab_proost_commands" e:proost_commands : term => elabCommands e
+
+unsafe def unsafe_parse_commands (stx : TSyntax `proost_commands) : MetaM RawCommands := do
+  evalExpr RawCommands (mkConst `RawCommands) (← elabCommands stx)
+
+@[implemented_by unsafe_parse_commands]
+opaque parse_commands : TSyntax `proost_commands → MetaM RawCommands
+
+def parse (s : String) (env : Environment): IO RawCommands := do
+  let ref_state : ST.Ref IO.RealWorld State:= match ST.Prim.mkRef {} () with
+    | .ok x _ => x
+  let ref_core_state : ST.Ref IO.RealWorld Core.State:= match ST.Prim.mkRef {env := env} () with
+    | .ok x _ => x
+  let stx := Parser.runParserCategory env `proost_commands s
+  match stx with
+    | .ok stx => 
+      let parse := parse_commands ⟨stx⟩ {} ref_state {fileName := "_", fileMap := default} ref_core_state ()
+      match parse with
+        | .ok raw _ => pure raw
+        |.error e _ => throw <| IO.Error.userError $ ← e.toMessageData.toString
+    | .error e =>  throw <| IO.Error.userError e
+
+#check FileMap

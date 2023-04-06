@@ -19,8 +19,8 @@ syntax "(" ident* ":" proost ")" "->" proost : proost
 syntax proost "->" proost : proost
 syntax proost proost : proost
 syntax "Prop" : proost
-syntax "Type" proost_level : proost
-syntax "Sort" proost_level : proost
+syntax "Type" (proost_level)? : proost
+syntax "Sort" (proost_level)? : proost
 
 declare_syntax_cat proost_command
 syntax "def" ident (".{" (ident),+ "}")? (":" proost)? ":=" proost : proost_command
@@ -29,6 +29,6 @@ syntax "eval" proost : proost_command
 syntax "check" proost : proost_command
 
 declare_syntax_cat proost_commands
-syntax command* : term
+syntax proost_command* : proost_commands
 
 

@@ -1,0 +1,7 @@
+def Excluded_middle: Type := (P: Prop) -> Or P (Not P)
+
+def Double_negation_elimination: Prop := (P : Prop) -> ((Not (Not P)) -> P)
+
+def Implication_as_or: Prop := (P : Prop) -> (Q : Prop) -> (P -> Q) -> Or (Not P) Q
+
+def Peirce: Prop := (P : Prop) -> (Q : Prop) -> ((P -> Q) -> P) -> P

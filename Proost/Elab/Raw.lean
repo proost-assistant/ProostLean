@@ -23,6 +23,8 @@ inductive RawCommand : Type :=
   | check : RawTerm → RawCommand
   | eval : RawTerm → RawCommand
 
+def RawCommands := List RawCommand
+
 inductive RawError : Type :=
   | duplicateUniverseVar : String → RawError
   | unboundLevelVar : String → RawError
