@@ -29,7 +29,6 @@ partial def elabLevel (stx : TSyntax `proost_level) : Except String RawLevel := 
 
   | _ => throw s!"unknown level syntax: {stx}"
 
-
 partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
   match stx with
 
@@ -87,7 +86,6 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
   --      elabProost $ ←`(proost| ($x : $A) -> ($y * : $A) -> $B)
         
   | _ => throw s!"unknown term syntax: {stx}"
-
 
 partial def elabCommand (stx : TSyntax `proost_command) : Except String RawCommand := do
   match stx with

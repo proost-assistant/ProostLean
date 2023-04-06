@@ -22,6 +22,17 @@ syntax "Prop" : proost
 syntax "Type" (proost_level)? : proost
 syntax "Sort" (proost_level)? : proost
 
+macro_rules
+  | `(proost| fun $x $y * $[: $A:proost]? => $B) =>
+    `(proost| fun $x $[: $A]? => fun $y* $[: $A]? => $B)
+
+  | `(proost| fun $x * $[: $A]?,  $[$y * : $B],* => $C) =>
+    `(proost| fun $x * $[: $A]? => fun $[$y* : $B],* => $C)
+  
+  | `(proost| ($x:ident $y * : $A ) -> $B) =>
+    `(proost| ($x : $A) -> ($y * : $A) -> $B)
+
+
 declare_syntax_cat proost_command
 syntax "def" ident (".{" (ident),+ "}")? (":" proost)? ":=" proost : proost_command
 syntax "axiom" ident (".{" (ident),+ "}")? ":" proost : proost_command

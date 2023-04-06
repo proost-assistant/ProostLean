@@ -175,7 +175,7 @@ def get_const_type (s : String) (arr : Array Level): TCEnv Term := do
 instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
-  let some optty := (← get).var_cont.get? n | unreachable!
+  let some optty := (← get).var_cont.get? n | panic! s!"panic ! variable {n} doesn't have a type in environment {repr (← get).var_cont}"
   let some ty := optty | throw $ .unTypedVariable n (← get).var_cont
   pure ty
 instance : GetType $ Nat := ⟨get_var_type⟩
@@ -185,5 +185,6 @@ inductive Command : Type :=
   | axiom : String → Nat → Term → Command
   | check : Term → Command
   | eval : Term → Command
+deriving Repr
 
-def Commands := List Command
+abbrev Commands := List Command

@@ -16,3 +16,8 @@ macro_rules
 
 def uncurry {A B C}: (A → B → C) → (A × B) → C :=
   λ f => λ ⟨a,b⟩ => f a b  
+
+instance : Coe (EStateM.Result ε σ α) (Except ε α) where
+  coe 
+    | .ok x _ => .ok x
+    | .error e _ => .error e

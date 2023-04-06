@@ -29,6 +29,7 @@ instance :  MonadLiftT RawLevelEnv RawTermEnv where
     fun h => liftExcept (a h)
 
 partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
+  --dbg_trace "elaborating :\n  {repr t} \nin env: \n  {repr (← get)}"
   match t with
     | prop | sort none => 
       return .sort 0
@@ -54,6 +55,9 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       if x != "_" then modify (·.push x)
       let t ← t.toCore
       return .abs ty t
+    | varconst s #[] => 
+      let some posx := (← get).position s | return .const s #[]
+      return .var posx.pred
     | varconst s arr =>
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
       return .const s arr
@@ -107,3 +111,6 @@ def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
     | .check t => 
       let t ← RawTerm.toCore t default default
       return .check t
+  
+def RawCommands.toCore (t : RawCommands) : RawCommandEnv Commands := 
+  t.mapM RawCommand.toCore
