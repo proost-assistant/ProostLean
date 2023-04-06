@@ -89,10 +89,19 @@ def map_univs : List String → EStateM RawError (HashMap String Nat) Unit
 
 def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
   match t with
-    | .def s l _todo ty t =>
+    | .def s l args ty t =>
       let hm ← match map_univs l default with
         | .ok () hm => pure hm
         | .error e _ => throw e
+      let (t,ty) := args.foldl
+        (λ (t,ty) (idents,ity) => 
+          idents.foldr 
+            (λ x (t,ty) => 
+              (RawTerm.lam x (some ity) t, 
+               Option.map (RawTerm.pi x ity ·) ty)) 
+            (t,ty)
+        ) (t,ty)
+      
       let ty ← Option.mapM (RawTerm.toCore · hm default) ty
       let t ← RawTerm.toCore t hm default
       return .def s hm.size ty t

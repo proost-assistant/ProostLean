@@ -102,10 +102,14 @@ partial def elabCommand (stx : TSyntax `proost_command) : Except String RawComma
       let l := Id.run do
         let some l := l | []
         l.getElems.map (·.getId.toString) |>.toList
+      let mut res_args := []
+      for i in [:args.size] do
+        let ty ← elabProost args_ty[i]!
+        res_args := (args[i]!.map (·.getId.toString),ty)::res_args
       let ty ← ty.mapM elabProost
       let t ← elabProost t
       -- parse arguments
-      return .def s.getId.toString l #[] ty t
+      return .def s.getId.toString l res_args ty t
 
   | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) => 
       let l := Id.run do

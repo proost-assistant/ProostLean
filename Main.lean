@@ -21,3 +21,5 @@ def main : List String → IO Unit
   | h::t => do
     type_check_file h
     main t
+
+--#eval main ["tests\\connectives.mdln"]
