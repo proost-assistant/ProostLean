@@ -74,7 +74,7 @@ partial def infer (t : Term): TCEnv Term := do
   | var n => get_type n
   | prod t u => do
     let univ_t ← (← t.infer).whnf
-    with_add_var_to_context (some univ_t) $ do
+    with_add_var_to_context (some t) $ do
       let univ_u ← (← u.infer).whnf
       univ_t.imax univ_u
   | t@(abs none _) => throw $ .cannotInfer t
@@ -118,7 +118,7 @@ partial def check (t ty : Term):  TCEnv Unit := do
     is_def_eq ty tty
     check t ty
   | .sort l₁, .sort l₂ =>
-    unless l₁ == l₂ do
+    unless l₁+1 == l₂ do
       throw $ .notDefEq (.sort l₁) (.sort l₂)
   | .var n, ty => do
     is_def_eq ty $ ← get_type n

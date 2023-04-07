@@ -22,12 +22,16 @@ def RawLevel.toCore (l : RawLevel) : RawLevelEnv Level := do
   | max l₁ l₂ => pure $ .max (← toCore l₁) (← toCore l₂)
   | imax l₁ l₂ => pure $ .imax (← toCore l₁) (← toCore l₂)
 
--- TODO convert all this to a reader, this is bad bad.
-abbrev RawTermEnv := ReaderT (HashMap String Nat) $ EStateM RawError (Queue String)
+structure RawTermCtx where
+  univs : HashMap String Nat
+  vars : Queue String
+deriving Inhabited
+
+abbrev RawTermEnv := ReaderT RawTermCtx $ Except RawError
 
 instance :  MonadLiftT RawLevelEnv RawTermEnv where
   monadLift {α} (a : RawLevelEnv α) := do
-    fun h => liftExcept (a h)
+    fun h => liftExcept (a h.univs)
 
 partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
   --dbg_trace "elaborating :\n  {repr t} \nin env: \n  {repr (← get)}"
@@ -37,10 +41,10 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
     | type none => 
       return .sort 1
     | type (some l) => 
-      let l ← liftExcept $ l.toCore (← read)
+      let l ← liftExcept $ l.toCore (← read).univs
       return .sort (l+1)
     | sort (some l) => 
-      let l ← liftExcept $ l.toCore (← read)
+      let l ← liftExcept $ l.toCore (← read).univs
       return .sort l
     | ann t ty =>
       return .ann (← t.toCore) (← ty.toCore)
@@ -48,16 +52,18 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       return .app (← f.toCore) (← x.toCore)
     | pi x t ty =>
       let t ← t.toCore
-      modify (·.push x)
-      let ty ←  ty.toCore
+      let ty ← withReader 
+        (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
+        ty.toCore
       return .prod t ty
     | lam x ty t =>
       let ty ← ty.mapM RawTerm.toCore
-      modify (·.push x)
-      let t ← t.toCore
+      let t ← withReader 
+        (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
+        t.toCore
       return .abs ty t
     | varconst s #[] => 
-      let some posx := (← get).position s | return .const s #[]
+      let some posx := (← read).vars.position s | return .const s #[]
       return .var posx.pred
     | varconst s arr =>
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
@@ -65,13 +71,12 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
     | «let» x ty t body => 
       let ty ← ty.mapM RawTerm.toCore
       let t ← t.toCore
-      modify (·.push x)
-      let body ← body.toCore
+      let body ← withReader 
+        (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
+        body.toCore
       return .app (.abs ty body) t
 
 abbrev RawCommandEnv := Except RawError
-
-#reduce EStateM.Result RawError (Queue String) Term 
 
 instance : Coe (EStateM.Result ε σ α) (Except ε α) where
   coe 
@@ -103,23 +108,23 @@ def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
             (t,ty)
         ) (t,ty)
       
-      let ty ← Option.mapM (RawTerm.toCore · hm default) ty
-      let t ← RawTerm.toCore t hm default
+      let ty ← Option.mapM (RawTerm.toCore · ⟨hm,default⟩ ) ty
+      let t ← RawTerm.toCore t ⟨hm,default⟩
       return .def s hm.size ty t
 
     | .axiom s l ty =>       
       let hm ← match map_univs l default with
         | .ok () hm => pure hm
         | .error e _ => throw e
-      let ty ← RawTerm.toCore ty hm default
+      let ty ← RawTerm.toCore ty ⟨hm,default⟩
       return .axiom s hm.size ty
 
     | .eval t => 
-      let t ← RawTerm.toCore t default default
+      let t ← RawTerm.toCore t default
       return .eval t
 
     | .check t => 
-      let t ← RawTerm.toCore t default default
+      let t ← RawTerm.toCore t default
       return .check t
   
 def RawCommands.toCore (t : RawCommands) : RawCommandEnv Commands := 

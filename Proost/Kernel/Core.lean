@@ -29,15 +29,14 @@ def Term.prop : Term := .sort 0
 def Term.type (l : Level) : Term := .sort l.succ
 
 def Term.toString : Term → String
-    | .var i => ToString.toString i
-    | .sort l => "Sort "++ ToString.toString l
-    | .app t1 t2 => "(" ++ t1.toString ++ ") (" ++ t2.toString ++ ")"
-    | .abs (some t1) t2 => "λ " ++ t1.toString ++ " => " ++ t2.toString
-    | .abs _ t2 => "λ _ => "++ t2.toString
-    | .prod t1 t2  => "Π " ++ t1.toString ++ "." ++ t2.toString
-    | .const s #[]=> s
-    | .const s l => s ++ ToString.toString l
-    | .ann t ty => "(" ++ t.toString ++ " : " ++ ty.toString ++ ")"
+    | .var i => s!"{i}"
+    | .sort l => s!"Sort {l}"
+    | .app t1 t2 => s!"({t1.toString}) ({t2.toString})"
+    | .abs (some t1) t2 => s!"λ {t1.toString} => {t2.toString}"
+    | .abs _ t2 => s!"λ _ => {t2.toString}"
+    | .prod t1 t2  => s!"Π ({t1.toString}). ({t2.toString})"
+    | .const s _ => s
+    | .ann t ty => s!"({t.toString} : {ty.toString})"
 
 instance : ToString Term := ⟨Term.toString⟩
 

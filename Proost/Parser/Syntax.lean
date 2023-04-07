@@ -30,9 +30,3 @@ syntax "check" proost : proost_command
 
 declare_syntax_cat proost_commands
 syntax proost_command* : proost_commands
-
-declare_syntax_cat foo
-syntax:11 ident : foo
-syntax:10 foo:10 foo:11 : foo
-
-#check `(foo|a b c d)
