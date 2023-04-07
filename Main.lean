@@ -4,7 +4,7 @@ open Lean
 def type_check_file (file : String) (debug : Bool): IO Unit := do
   let code ← IO.FS.readFile ⟨file⟩ 
   initSearchPath (← Lean.findSysroot) ["build/lib"]
-  let env ← importModules [{ module := `Proost.Parser.ParseToRaw2 }] {}
+  let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
   println! "parsing {file}"
   let raw ← IO.ofExcept $ parse code env
   println! "parsing succeeded !\n Term produced:\n  {raw}"

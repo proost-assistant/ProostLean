@@ -11,16 +11,16 @@ declare_syntax_cat proost_constant
 syntax ident (".{" (proost_level),+ "}")? : proost_constant
 
 declare_syntax_cat proost
-syntax proost_constant : proost
-syntax "(" proost ")" : proost
-syntax "(" proost ":" proost ")" : proost
-syntax "fun" (ident* (":" proost)?),* "=>" proost : proost 
-syntax "(" ident* ":" proost ")" "->" proost : proost
-syntax proost "->" proost : proost
-syntax proost proost+ : proost
-syntax "Prop" : proost
-syntax "Type" (proost_level)? : proost
-syntax "Sort" (proost_level)? : proost
+syntax:11 proost_constant : proost
+syntax:11 "(" proost ")" : proost
+syntax:11 "(" proost ":" proost ")" : proost
+syntax:11 "fun" (ident* (":" proost)?),* "=>" proost : proost 
+syntax:11 "(" ident* ":" proost ")" "->" proost : proost
+syntax:11 proost "->" proost : proost
+syntax:10 proost:10 proost:11 : proost
+syntax:11 "Prop" : proost
+syntax:11 "Type" (proost_level)? : proost
+syntax:11 "Sort" (proost_level)? : proost
 
 declare_syntax_cat proost_command
 syntax "def" ident (".{" (ident),+ "}")? ("("ident+ ":" proost")")* (":" proost)? ":=" proost : proost_command
@@ -31,3 +31,8 @@ syntax "check" proost : proost_command
 declare_syntax_cat proost_commands
 syntax proost_command* : proost_commands
 
+declare_syntax_cat foo
+syntax:11 ident : foo
+syntax:10 foo:10 foo:11 : foo
+
+#check `(foo|a b c d)

@@ -1,152 +1,141 @@
 import Proost.Parser.Syntax
 import Proost.Elab.Raw
+import Proost.Util.Misc
 import Lean
 
 open Lean Elab Meta
 
-partial def elabLevel (stx : TSyntax `proost_level) : MetaM Expr := do
+partial def elabLevel (stx : TSyntax `proost_level) : Except String RawLevel := do
   match stx with
 
-  | `(proost_level| $n:num) => mkAppM `RawLevel.num #[mkNatLit n.getNat]
+  | `(proost_level| $n:num) => return .num n.getNat
   
-  | `(proost_level| $x:ident) => mkAppM `RawLevel.var #[mkStrLit x.getId.toString]
+  | `(proost_level| $x:ident) => return .var x.getId.toString
 
-  | `(proost_level| $l + 0) => 
-      elabLevel (←`(proost_level| $l))
+  | `(proost_level| $l + 0) => elabLevel l
   
   | `(proost_level| $l + $n) => 
         let l ← elabLevel l
-        mkAppM `RawLevel.plus #[l, mkNatLit n.getNat]
+        return .plus l n.getNat
 
   |`(proost_level| max $l₁ $l₂) =>
       let l₁ ← elabLevel l₁
       let l₂ ← elabLevel l₂
-      mkAppM `RawLevel.max #[l₁,l₂]
+      return .max l₁ l₂
 
   |`(proost_level| imax $l₁ $l₂) =>
       let l₁ ← elabLevel l₁
       let l₂ ← elabLevel l₂
-      mkAppM `RawLevel.imax #[l₁,l₂]
+      return .imax l₁ l₂
 
-  | _ => do println! stx; throwUnsupportedSyntax
+  | _ => throw s!"unknown level syntax: {stx}"
 
-partial def elabProost (stx : TSyntax `proost) : MetaM Expr := do
-  println! s!"parsing term {stx}"
+partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
   match stx with
 
-  | `(Prop) => pure $ mkConst `RawTerm.prop
+  | `(proost| Prop) => return .prop
 
-  | `(proost| Type $l) => mkAppM `RawTerm.type #[← elabLevel l]
+  | `(proost| Type) => return .type none
 
-  | `(proost| Sort $l) => mkAppM `RawTerm.sort #[← elabLevel l]
+  | `(proost| Sort) => return .sort none
+
+  | `(proost| Type $l) => return .type (← elabLevel l)
+
+  | `(proost| Sort $l) =>  return .sort (← elabLevel l)
+
+  | `(proost| ($t)) => elabProost t
 
   | `(proost| $x:ident $[.{ $l:proost_level ,* }]?  ) => 
       let arr ←  
         if let some stx := l then
             Array.mapM elabLevel stx
         else pure Array.empty
-      mkAppM `RawTerm.varconst #[mkStrLit x.getId.toString, ← mkAppM `Array.mk #[← mkListLit (mkConst `RawLevel) $ arr.toList] ]
+      return .varconst x.getId.toString arr
     
   | `(proost| ($t : $ty)) => do
       let t ← elabProost t
       let ty ← elabProost ty 
-      mkAppM `RawTerm.ann #[t,ty]
+      return .ann t ty
+
+  | `(proost| $t $arg) => do
+      let t   ← elabProost t
+      let arg ← elabProost arg
+      return .app t arg
 
   | `(proost| fun $x:ident $[: $A:proost]? => $B) => do
-        let A ← do
-            let some A := A | mkAppOptM `Option.none #[some $ mkConst `RawTerm]
-            mkAppM `Option.some #[ ← elabProost A]
+        let A ← A.mapM elabProost
         let B ← elabProost B
-        mkAppM `RawTerm.lam #[mkStrLit x.getId.toString, A, B]
+        return .lam x.getId.toString A B
 
-  | `(proost| fun $x $y * $[: $A:proost]? => $B) => do
-        elabProost $ ←`(proost| fun $x $[: $A]? => fun $y* $[: $A]? => $B)
-
-  | `(proost| fun $x * $[: $A]?,  $[$y * : $B],* => $C) => do
-      elabProost $ ←`(proost| fun $x * $[: $A]? => fun $[$y* : $B],* => $C)
+  | `(proost| fun $[$y * $[: $A]?],* => $B) => do
+        let A ← A.mapM (Option.mapM elabProost)  
+        let mut res ← elabProost B
+        for i in [1:y.size+1] do
+          let cur := y.size-i
+          let ty := A[cur]!
+          for j in [1:y[cur]!.size+1] do
+            let sub := y[cur]!.size - j
+            let x := y[cur]![sub]!.getId.toString
+            res ← pure $ .lam x ty res
+        return res
       
   | `(proost| $A -> $B) => do
         let A ← elabProost A  
         let B ← elabProost B
-        mkAppM `RawTerm.prod #[mkStrLit "_", A, B]
+        return .pi "_" A B
 
   | `(proost| ($x:ident : $A ) -> $B ) => do
         let A ← elabProost A  
         let B ← elabProost B
-        mkAppM `RawTerm.prod #[mkStrLit x.getId.toString, A, B]
+        return .pi x.getId.toString A B
 
-  | `(proost| ($x:ident $y * : $A ) -> $B) => do
-        elabProost $ ←`(proost| ($x : $A) -> ($y * : $A) -> $B)
+  | `(proost| ($y * : $A ) -> $B) => do
+        let A ← elabProost A  
+        let B ← elabProost B
+        y.foldrM (λ x t => return .pi x.getId.toString A t) B
         
-  | _ => do println! stx; throwUnsupportedSyntax
+  | _ => throw s!"unknown term syntax: {stx}"
 
-partial def elabCommand (stx : TSyntax `proost_command) : MetaM Expr := do
+partial def elabCommand (stx : TSyntax `proost_command) : Except String RawCommand := do
   match stx with
-  | `(proost_command| def $s $[.{ $l:ident ,* }]? $[: $ty]? := $t) =>
-      let l ← do
-        let some l := l | mkListLit (mkConst `String) .nil
-        mkListLit (mkConst `String) $ l.getElems.toList.map (λ x => mkStrLit (TSyntax.getId x).toString)
-      let ty ← do
-        let some ty := ty | mkAppOptM `Option.none #[some $ mkConst `RawTerm]
-        mkAppM `Option.some #[ ← elabProost ty]
+  | `(proost_command| def $s $[.{ $l:ident ,* }]? $[($args * : $args_ty)]* $[: $ty]? := $t) =>
+      let l := Id.run do
+        let some l := l | []
+        l.getElems.map (·.getId.toString) |>.toList
+      let mut res_args := []
+      for i in [:args.size] do
+        let ty ← elabProost args_ty[i]!
+        res_args := (args[i]!.map (·.getId.toString),ty)::res_args
+      let ty ← ty.mapM elabProost
       let t ← elabProost t
-      mkAppM `RawCommand.def #[mkStrLit s.getId.toString, l, ty, t]
+      -- parse arguments
+      return .def s.getId.toString l res_args ty t
 
   | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) => 
-      let l ← do
-        let some l := l | mkListLit (mkConst `String) .nil
-        mkListLit (mkConst `String) $ l.getElems.toList.map (λ x => mkStrLit (TSyntax.getId x).toString)
+      let l := Id.run do
+        let some l := l | []
+        l.getElems.map (·.getId.toString) |>.toList
       let ty ← elabProost ty
-      mkAppM `RawCommand.axiom #[mkStrLit s.getId.toString, l, ty]
+      return .axiom s.getId.toString l ty
 
   | `(proost_command| check $t) => 
       let t ← elabProost t 
-      mkAppM `RawCommand.check #[t]
+      return .check t
 
   | `(proost_command| eval $t) => 
       let t ← elabProost t 
-      mkAppM `RawCommand.eval #[t]
+      return .eval t
   
-  | _ => do println! stx; throwUnsupportedSyntax
+  | _ => throw s!"unknown command: {stx}"
 
 
-partial def elabCommands (stx : TSyntax `proost_commands) : MetaM Expr := do
+partial def elabCommands (stx : TSyntax `proost_commands) : Except String RawCommands := do
    match stx with
-  | `(proost_commands| $c:proost_command) => 
-      println! s!"parsing command {c}"
-      let c ← elabCommand c
-      mkListLit (mkConst `RawCommand) [c]
-  | `(proost_commands| $c:proost_command $cl*) => 
-      println! s!"parsing command {c}"
-      let c ← elabCommand c
-      let cl ← elabCommands $ ←`(proost_commands| $[$cl]* )
-      mkAppM `List.cons #[c,cl]    
-  | _ => do println! stx; throwUnsupportedSyntax
+  | `(proost_commands| $[$cl]* ) => 
+      let cl := cl
+      cl.mapM elabCommand |>.map Array.toList
+  | _ => throw s!"unknown commands syntax: {stx}"
 
-elab "test_elab_level" e:proost_level : term => elabLevel e
-elab "test_elab_term" e:proost : term => elabProost e
-elab "test_elab_cmd" e:proost_command : term => elabCommand e
 
-elab "elab_proost_commands" e:proost_commands : term => elabCommands e
-
-unsafe def unsafe_parse_commands (stx : TSyntax `proost_commands) : MetaM RawCommands := do
-  evalExpr RawCommands (mkConst `RawCommands) (← elabCommands stx)
-
-@[implemented_by unsafe_parse_commands]
-opaque parse_commands : TSyntax `proost_commands → MetaM RawCommands
-
-def parse (s : String) (env : Environment): IO RawCommands := do
-  let ref_state : ST.Ref IO.RealWorld State:= match ST.Prim.mkRef {} () with
-    | .ok x _ => x
-  let ref_core_state : ST.Ref IO.RealWorld Core.State:= match ST.Prim.mkRef {env := env} () with
-    | .ok x _ => x
-  let stx := Parser.runParserCategory env `proost_commands s
-  match stx with
-    | .ok stx => 
-      let parse := parse_commands ⟨stx⟩ {} ref_state {fileName := "_", fileMap := default} ref_core_state ()
-      match parse with
-        | .ok raw _ => pure raw
-        |.error e _ => throw <| IO.Error.userError $ ← e.toMessageData.toString
-    | .error e =>  throw <| IO.Error.userError e
-
-#check FileMap
+def parse (s: String) (env: Environment) : Except String RawCommands := do
+  elabCommands ⟨(← Parser.runParserCategory env `proost_commands s)⟩ 
