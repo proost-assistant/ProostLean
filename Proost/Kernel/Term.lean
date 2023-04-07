@@ -39,8 +39,8 @@ partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | const s l => const s l
   | sort l => sort l
 
-def add_var_to_context (t : Option Term) : TCEnv Unit := 
-    modify $ λ con => {con with var_cont := con.var_cont.map (.map $ Term.shift 1 0) |>.push t}
+def with_add_var_to_context (t : Option Term) : TCEnv α → TCEnv α:= 
+    withReader λ con => {con with var_cont := con.var_cont.map (.map $ Term.shift 1 0) |>.push t}
 
 def noAnn : Term → Term
   | ann t _ => t

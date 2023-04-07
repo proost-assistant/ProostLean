@@ -11,4 +11,4 @@ def axioms : List Axiom :=
   ] |>.join
 
 
-def initialize_env : TCEnv Unit := add_axioms axioms
+def initialize_env : TCEnv α →TCEnv α := with_add_axioms axioms

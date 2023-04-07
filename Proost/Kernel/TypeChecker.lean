@@ -59,13 +59,13 @@ def is_def_eq (lhs rhs : Term) : TCEnv Unit :=
 
 def imax (lhs rhs : Term) : TCEnv Term := do
   match lhs,rhs with
-    | sort l₁, sort l₂ => return sort $ l₁.imax l₂
+    | sort l₁, sort l₂ => return sort $ l₁.imax l₂ |>.normalize 
     | sort _,_ => throw $ .notASort rhs
     | _,_ => throw $ .notASort lhs
 
 mutual
 partial def infer (t : Term): TCEnv Term := do
-  add_trace s!"trying to infer the type of {t}"
+  add_trace s!"trying to infer the type of {t} in var_env {(← read).var_cont}"
   let res ← match t with
   | ann t ty => do
     check t ty
@@ -74,20 +74,19 @@ partial def infer (t : Term): TCEnv Term := do
   | var n => get_type n
   | prod t u => do
     let univ_t ← (← t.infer).whnf
-    add_var_to_context $ some univ_t
-    let univ_u ← (← u.infer).whnf
-    univ_t.imax univ_u
+    with_add_var_to_context (some univ_t) $ do
+      let univ_u ← (← u.infer).whnf
+      univ_t.imax univ_u
   | t@(abs none _) => throw $ .cannotInfer t
   | abs (some t) u => do
     let univ_t ← t.infer
     if let sort _ := univ_t then
-      add_var_to_context $ some t
+      with_add_var_to_context (some t) $ do
       return t.prod $ ← u.infer
     else throw $ .notASort univ_t
 
   | app t u => do
     let type_t ← (← t.infer).whnf
-
     if let prod arg_type cls := type_t then
       check u arg_type
       pure $ cls.substitute u 1
@@ -96,15 +95,17 @@ partial def infer (t : Term): TCEnv Term := do
    add_trace s!"inferred {t} : {res}"
    return res
 
+
+
 partial def check (t ty : Term):  TCEnv Unit := do
-  add_trace s!"checking {t} : {ty}"
+  add_trace s!"checking {t} : {ty} in var_env {(← read).var_cont}"
   match t,ty with
   | .abs none body, .prod a b => do
-    add_var_to_context $ some a
+    with_add_var_to_context (some a) $
     check  body b
   | .abs (some ty) body, .prod a b => do
     is_def_eq a ty
-    add_var_to_context $ some a
+    with_add_var_to_context (some a) $
     check body b
   | .app t u, ty => do
     let type_t ← infer t

@@ -9,7 +9,6 @@ lean_lib Proost
 lean_exe proost where
   root := `Main
 
-@[default_target]
 lean_exe debug where
   root := `Main
   buildType := .debug

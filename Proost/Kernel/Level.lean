@@ -28,10 +28,9 @@ def Level.toNum? : Level → Option Nat
   | var .. => none
 
 def Level.toString (l : Level): String :=
-  if let some n := l.toNum? then s!"{n}"
-  else match l with
-  | 0 => unreachable!
-  | l + n => l.toString ++ s!"+ {n}"
+  match l with
+  | 0 => "0"
+  | l + n => l.toString ++ s!" + {n}"
   | var i => "u" ++ ToString.toString i
   | max l1 l2 => "max (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
   | imax l1 l2 => "imax (" ++ l1.toString ++ ") (" ++ l2.toString ++")"

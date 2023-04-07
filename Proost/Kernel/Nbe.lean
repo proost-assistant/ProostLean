@@ -39,7 +39,7 @@ mutual
           dbg_trace s!"unbound index {x} with closure {closure}"
           return .neutral (.var x) []
     | .const s arr => do
-        let res := (← get).const_con.find? s
+        let res := (← read).const_con.find? s
         match res with
           | some (.ax a) => pure $ .neutral (.ax a arr) []
           | some (.de d) => d.term |>.substitute_univ arr |>.eval closure

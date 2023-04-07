@@ -22,6 +22,7 @@ def RawLevel.toCore (l : RawLevel) : RawLevelEnv Level := do
   | max l₁ l₂ => pure $ .max (← toCore l₁) (← toCore l₂)
   | imax l₁ l₂ => pure $ .imax (← toCore l₁) (← toCore l₂)
 
+-- TODO convert all this to a reader, this is bad bad.
 abbrev RawTermEnv := ReaderT (HashMap String Nat) $ EStateM RawError (Queue String)
 
 instance :  MonadLiftT RawLevelEnv RawTermEnv where
@@ -47,12 +48,12 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       return .app (← f.toCore) (← x.toCore)
     | pi x t ty =>
       let t ← t.toCore
-      if x != "_" then modify (·.push x)
+      modify (·.push x)
       let ty ←  ty.toCore
       return .prod t ty
     | lam x ty t =>
       let ty ← ty.mapM RawTerm.toCore
-      if x != "_" then modify (·.push x)
+      modify (·.push x)
       let t ← t.toCore
       return .abs ty t
     | varconst s #[] => 
@@ -64,7 +65,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
     | «let» x ty t body => 
       let ty ← ty.mapM RawTerm.toCore
       let t ← t.toCore
-      if x != "_" then modify (·.push x)
+      modify (·.push x)
       let body ← body.toCore
       return .app (.abs ty body) t
 

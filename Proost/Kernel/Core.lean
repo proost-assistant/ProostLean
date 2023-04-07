@@ -103,7 +103,6 @@ inductive TCError : Type :=
   | wrongArgumentType : Term → Term → TypedTerm → TCError
   | notAFunction : Value → Value → TCError
   | notAFunction₂ : TypedTerm → Term → TCError
-  | typeMismatch : Term → Term → TCError
   | unTypedVariable : Nat → VarContext → TCError
   | cannotInfer : Term → TCError
   | wrongNumberOfUniverse : String → Nat → Nat → TCError
@@ -115,35 +114,39 @@ instance : ToString TCError where
     | .unboundDeBruijnIndex n con => s!"unbound De Bruijn index {n} in context {con}"
     | .unknownConstant c => s!"unknown constant {c}"
     | .notASort t => s!"expected a sort, found {t}"
-    | .notDefEq t₁ t₂ => s!"{repr t₁} and {repr t₂} are not definitionally equal"
+    | .notDefEq t₁ t₂ => s!"{t₁} and {t₂} are not definitionally equal"
     | .wrongArgumentType f exp (t,ty)=> s!"function {f} expects an argument of type {exp}, received argument {t} of type {ty}"
     | .cannotInfer t => s!"cannot infer type of term {t}"
-    | _ => todo!
-
+    | .alreadyDefined s => s!"{s} is already defined"
+    | .wrongNumberOfUniverse s n k => s!"wrong number of universes given, {s} expect {n} universes, received {k}"
+    | .unTypedVariable v ctx => s!"unable to infer the type of variable {v} in context {ctx}"
+    | .notAFunction f x => s!"{f} is not a function but was given an argument {x}"
+    | .notAFunction₂ (f,ty) x => s!"{f} : {ty} is not a function but was given an argument {x}"
+      
 abbrev Result (A) := Except TCError A
 
-abbrev TCEnv := EStateM TCError TCContext
+abbrev TCEnv := ReaderT TCContext (Except TCError)
 
 def EStateM.Result.get : EStateM.Result ε σ α → σ
   | .ok _ st
   | .error _ st => st
 
 def add_trace (tr : String): TCEnv Unit := do
-    if (← get).debug then dbg_trace tr
+    if (← read).debug then dbg_trace tr
 
-def add_const (name : String) (c : Const) : TCEnv Unit := do
-    if let some _ := (← get).const_con.find? name then
+def with_add_const (name : String) (c : Const) (u : TCEnv α) : TCEnv α := do
+    if let some _ := (← read).const_con.find? name then
       throw $  .alreadyDefined name
-    modify $ λ con => {con with const_con := HashMap.insert con.const_con name c}
+    withReader (λ con => {con with const_con := HashMap.insert con.const_con name c}) u
 
-def add_decl (name : String) (d: Decl) : TCEnv Unit := 
-    add_const name $ .de d
+def with_add_decl (name : String) (d: Decl) (u : TCEnv α)  :  TCEnv α := 
+    with_add_const name (.de d) u
 
-def add_axiom (a : Axiom) : TCEnv Unit := do
-    add_const a.name $ .ax a
+def with_add_axiom (a : Axiom) (u : TCEnv α)  :  TCEnv α := do
+    with_add_const a.name (.ax a) u
 
-def add_axioms (a : List Axiom) : TCEnv Unit := do
-  a.foldlM (fun _ ax => add_axiom ax) ()
+def with_add_axioms (a : List Axiom) (u : TCEnv α) : TCEnv α := do
+  a.foldlM (fun u ax => with_add_axiom ax (pure u)) (← u)
 
 instance (priority := high) : MonadExceptOf TCError TCEnv where
   throw err := do
@@ -151,11 +154,11 @@ instance (priority := high) : MonadExceptOf TCError TCEnv where
     throw err
   tryCatch := tryCatch
 
-def add_var_to_context_no_shift (t : Option Term) : TCEnv Unit :=
-    modify $ λ con => {con with var_cont := con.var_cont.push t}
+def withadd_var_to_context_no_shift (t : Option Term) : TCEnv α →TCEnv α  :=
+    withReader λ con => {con with var_cont := con.var_cont.push t}
 
 def reduce_decl (s : String) : TCEnv Term := do
-  let res := (← get).const_con.find? s
+  let res := (← read).const_con.find? s
   if let some $ .de d := res then
     return d.term
   else
@@ -165,7 +168,7 @@ class GetType (A: Type) where
   get_type : A → TCEnv Term
 
 def get_const_type (s : String) (arr : Array Level): TCEnv Term := do
-  let res := (← get).const_con.find? s
+  let res := (← read).const_con.find? s
   if let some $ c := res then
     if c.n_of_univ != arr.size then
       throw $ .wrongNumberOfUniverse s c.n_of_univ arr.size
@@ -175,8 +178,9 @@ def get_const_type (s : String) (arr : Array Level): TCEnv Term := do
 instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
-  let some optty := (← get).var_cont.get? n | panic! s!"panic ! variable {n} doesn't have a type in environment {repr (← get).var_cont}"
-  let some ty := optty | throw $ .unTypedVariable n (← get).var_cont
+  let ctx := (← read).var_cont
+  let some optty := ctx.get? (ctx.size - n - 1) | unreachable!
+  let some ty := optty | throw $ .unTypedVariable n ctx
   pure ty
 instance : GetType $ Nat := ⟨get_var_type⟩
 

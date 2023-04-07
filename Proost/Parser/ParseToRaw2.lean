@@ -57,10 +57,11 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
       let ty ← elabProost ty 
       return .ann t ty
 
-  | `(proost| $t $ty) => do
+  | `(proost| $t $args*) => do
+      dbg_trace s!"elaborating app {stx}"
       let t ← elabProost t
-      let ty ← elabProost ty 
-      return .app t ty
+      let args ← args.mapM elabProost 
+      args.foldlM (λ t arg => return .app t arg) t
 
   | `(proost| fun $x:ident $[: $A:proost]? => $B) => do
         let A ← A.mapM elabProost
