@@ -9,7 +9,7 @@ open Queue
 
 namespace Queue
 
-instance [Repr α ] : ToString $ Queue α := ⟨fun x => reprStr x⟩
+instance [Repr α] : ToString $ Queue α := ⟨fun x => reprStr x⟩
 
 def length : Queue α → Nat
   | nil => 0
@@ -45,29 +45,30 @@ def push_all (q : Queue α) (arr : Array α) : Queue α := Id.run do
   res
 
 
-def toList : List α → Queue α
+def ofList : List α → Queue α
     | [] => nil
-    | h::t => push h (toList t)
+    | h::t => push h (ofList t)
 
 instance : Coe (List α) (Queue α) where
-  coe := toList
+  coe := ofList
 
 def position [DecidableEq α] (x : α) : Queue α → Option Nat
   | nil => none
-  | unit a => if x = a then some 1 else none
+  | unit a => if x = a then some 0 else none
   | two a b =>
-    if x = a then some 1 else
-    if x = b then some 2 else
+    if x = a then some 0 else
+    if x = b then some 1 else
       none
   | more a middle b => do
     if x = a then
-      some 1 
+      some 0 
     else
     if let some res := position x middle then
       pure $ res + 1
     else
     if x = b then 
-      some $ 2 + middle.length 
+      some $ 1 + middle.length 
     else
       none
+
 end Queue
