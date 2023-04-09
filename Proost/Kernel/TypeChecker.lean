@@ -89,7 +89,7 @@ partial def infer (t : Term): TCEnv Term := do
     let type_t ← (← t.infer).whnf
     if let prod arg_type cls := type_t then
       check u arg_type
-      pure $ cls.substitute u 1
+      pure $ cls.substitute u 0
     else throw $ .notAFunction₂ (t,type_t) u
    | const s arr => get_type (s,arr)
    add_trace s!"inferred {t} : {res}"
@@ -111,7 +111,7 @@ partial def check (t ty : Term):  TCEnv Unit := do
     let type_t ← infer t
     let .prod a b := type_t | throw $ .notAFunction₂ (t,type_t) u
     check u a
-    let b := b.substitute u 1
+    let b := b.substitute u 0
     is_def_eq b ty
   | .const s arr,ty => do is_def_eq ty $ ← get_type (s,arr)
   | .ann t ty, tty => do

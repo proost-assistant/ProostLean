@@ -34,7 +34,7 @@ def Term.toString : Term → String
     | .app t1 t2 => s!"({t1.toString}) ({t2.toString})"
     | .abs (some t1) t2 => s!"λ {t1.toString} => {t2.toString}"
     | .abs _ t2 => s!"λ _ => {t2.toString}"
-    | .prod t1 t2  => s!"Π ({t1.toString}). ({t2.toString})"
+    | .prod t1 t2  => s!"Π ({t1.toString}). {t2.toString}"
     | .const s _ => s
     | .ann t ty => s!"({t.toString} : {ty.toString})"
 

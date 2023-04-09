@@ -6,7 +6,7 @@ namespace Term
 -- Only partial because structural recursion on nested inductives is broken
 partial def shift (offset depth : Nat) : Term → Term
   | var n => 
-    let n := if n > depth then n+offset else n
+    let n := if n >= depth then n+offset else n
     var n
   | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
   | abs ty body =>
@@ -23,7 +23,7 @@ partial def shift (offset depth : Nat) : Term → Term
 
 partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
-      | .eq => sub.shift depth.pred 0
+      | .eq => sub.shift depth 0
       | .gt => var n.pred
       | .lt => var n
   | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
@@ -40,7 +40,7 @@ partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | sort l => sort l
 
 def with_add_var_to_context (t : Option Term) : TCEnv α → TCEnv α:= 
-    withReader λ con => {con with var_cont := con.var_cont.map (.map $ Term.shift 1 0) |>.push t}
+    withReader λ con => {con with var_cont := con.var_cont|>.push t |>.map (.map $ Term.shift 1 0) }
 
 def noAnn : Term → Term
   | ann t _ => t
@@ -54,6 +54,8 @@ partial def substitute_univ (lvl : Array Level) : Term → Term
   | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
   | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
   | const s arr => const s $ arr.map (Level.substitute · lvl)
+
+--#eval Term.prod (.var 4) (.prod (.var 4) (.var 2)) |>.shift 1 0
 
 
 /-
