@@ -65,7 +65,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
     | varconst s #[] => 
       let some posx := (← read).vars.position s | return .const s #[]
       dbg_trace s!"looking for DB var of {s} in {(← read).vars}, found {posx}"
-      return .var posx
+      return .var posx.succ
     | varconst s arr =>
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
       return .const s arr

@@ -6,7 +6,7 @@ namespace Term
 -- Only partial because structural recursion on nested inductives is broken
 partial def shift (offset depth : Nat) : Term → Term
   | var n => 
-    let n := if n >= depth then n+offset else n
+    let n := if n > depth then n+offset else n
     var n
   | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
   | abs ty body =>
@@ -23,8 +23,8 @@ partial def shift (offset depth : Nat) : Term → Term
 
 partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
-      | .eq => sub.shift depth 0
-      | .gt => var n.pred
+      | .eq => sub.shift depth.pred 0
+      | .gt => var (n-1)
       | .lt => var n
   | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
   | abs ty body => 

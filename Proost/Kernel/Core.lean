@@ -86,8 +86,8 @@ abbrev ConstContext := HashMap String Const
 abbrev VarContext := Array $ Option Term
 
 structure TCContext where
-  const_con : ConstContext
-  var_cont : VarContext
+  const_con : ConstContext := default
+  var_cont : VarContext := default
   debug : Bool := false
 deriving Inhabited
 
@@ -131,7 +131,7 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
   | .error _ st => st
 
 def add_trace (tr : String): TCEnv Unit := do
-    if (← read).debug then dbg_trace tr
+    if (← read).debug then dbg_trace s!"\n{tr}"
 
 def with_add_const (name : String) (c : Const) (u : TCEnv α) : TCEnv α := do
     if let some _ := (← read).const_con.find? name then
@@ -178,7 +178,7 @@ instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
   let ctx := (← read).var_cont
-  let some optty := ctx.get? (ctx.size - n - 1) | unreachable!
+  let some optty := ctx.get? (ctx.size - n) | unreachable!
   let some ty := optty | throw $ .unTypedVariable n ctx
   pure ty
 instance : GetType $ Nat := ⟨get_var_type⟩

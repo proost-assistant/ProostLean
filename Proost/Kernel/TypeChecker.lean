@@ -89,7 +89,7 @@ partial def infer (t : Term): TCEnv Term := do
     let type_t ← (← t.infer).whnf
     if let prod arg_type cls := type_t then
       check u arg_type
-      pure $ cls.substitute u 0
+      pure $ cls.substitute u 1
     else throw $ .notAFunction₂ (t,type_t) u
    | const s arr => get_type (s,arr)
    add_trace s!"inferred {t} : {res}"
@@ -111,12 +111,12 @@ partial def check (t ty : Term):  TCEnv Unit := do
     let type_t ← infer t
     let .prod a b := type_t | throw $ .notAFunction₂ (t,type_t) u
     check u a
-    let b := b.substitute u 0
+    let b := b.substitute u 1
     is_def_eq b ty
   | .const s arr,ty => do is_def_eq ty $ ← get_type (s,arr)
   | .ann t ty, tty => do
-    is_def_eq ty tty
     check t ty
+    is_def_eq ty tty
   | .sort l₁, .sort l₂ =>
     unless l₁+1 == l₂ do
       throw $ .notDefEq (.sort l₁) (.sort l₂)
@@ -136,3 +136,33 @@ def is_type (t : Term): TCEnv Unit := do
   is_sort ty
 
 end Term
+
+#eval {debug := true} |> do
+  let And : Term := 
+    .abs (some .prop) $ 
+    .abs (some .prop) $ 
+    .prod .prop $ 
+    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
+    .var 2
+  let And_ty : Term := .prod .prop
+    $ .prod .prop
+    $ .prop
+
+  let And_intro : Term :=
+    .abs (some .prop) $ 
+    .abs (some .prop) $ 
+    .abs (some $ .var 2) $ 
+    .abs (some $ .var 2) $ 
+    .abs (some .prop) $ 
+    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
+    .app (.app (.var 1) (.var 4)) (.var 3)
+  let And_intro_ty : Term :=
+    .prod .prop $ 
+    .prod .prop $ 
+    .prod (.var 2) $ 
+    .prod (.var 2) $ 
+    .app (.app And (.var 4)) (.var 3)
+
+  let And_decl : Decl := ⟨And_ty,0,And⟩
+  with_add_decl "And" And_decl $
+    And_intro  |>.is_def_eq And_intro_ty

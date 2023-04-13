@@ -24,4 +24,4 @@ def main (args : List String) : IO Unit :=
     type_check_file h ("--debug" ∈ args)
     main t
 
---#eval main ["tests\\connectives.mdln"]
+#eval main ["tests\\connectives.mdln","--debug"]
