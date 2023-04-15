@@ -1,6 +1,6 @@
 import Proost.Kernel.Level
 import Proost.Kernel.Term
-import Proost.Kernel.Nbe
+--import Proost.Kernel.Nbe
 import Proost.Util.Misc
 
 set_option autoImplicit false
@@ -27,7 +27,7 @@ open GetType
 --end
 
 partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
-  add_trace s!"checking {lhs} = {rhs}"
+  add_trace "conversion" s!"checking {lhs} = {rhs}"
   let lhs := lhs.noAnn
   let rhs := rhs.noAnn
   if lhs == rhs then
@@ -42,7 +42,7 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
 
   match lhs,rhs with
     | .sort l₁, .sort l₂ => 
-      add_trace "checking {l₁} = {l₂}"
+      add_trace "conversion" "checking {l₁} = {l₂}"
       pure $ l₁.is_eq l₂
     | .var i, .var j => pure $ i == j
     | .abs _ t₁, .abs _ t₂ => conversion t₁ t₂
@@ -53,7 +53,7 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
 namespace Term
 
 def is_def_eq (lhs rhs : Term) : TCEnv Unit :=
-  unless lhs == rhs do
+  unless ← conversion lhs rhs do
   throw $ .notDefEq lhs rhs
 
 
@@ -65,7 +65,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
 
 mutual
 partial def infer (t : Term): TCEnv Term := do
-  add_trace s!"trying to infer the type of {t} in var_env {(← read).var_cont}"
+  add_trace "tc" s!"trying to infer the type of {t} in var_env {(← read).var_cont}"
   let res ← match t with
   | ann t ty => do
     check t ty
@@ -87,18 +87,19 @@ partial def infer (t : Term): TCEnv Term := do
 
   | app t u => do
     let type_t ← (← t.infer).whnf
+    add_trace "tc" s!"{t} has type {type_t}"
     if let prod arg_type cls := type_t then
       check u arg_type
       pure $ cls.substitute u 1
     else throw $ .notAFunction₂ (t,type_t) u
    | const s arr => get_type (s,arr)
-   add_trace s!"inferred {t} : {res}"
+   add_trace "tc" s!"inferred {t} : {res}"
    return res
 
 
 
 partial def check (t ty : Term):  TCEnv Unit := do
-  add_trace s!"checking {t} : {ty} in var_env {(← read).var_cont}"
+  add_trace "tc" s!"checking {t} : {ty} in var_env {(← read).var_cont}"
   match t,ty with
   | .abs none body, .prod a b => do
     with_add_var_to_context (some a) $
@@ -137,7 +138,7 @@ def is_type (t : Term): TCEnv Unit := do
 
 end Term
 
-#eval {debug := true} |> do
+#eval {debug := ["tc"]} |> do
   let And : Term := 
     .abs (some .prop) $ 
     .abs (some .prop) $ 
@@ -165,4 +166,4 @@ end Term
 
   let And_decl : Decl := ⟨And_ty,0,And⟩
   with_add_decl "And" And_decl $
-    And_intro  |>.is_def_eq And_intro_ty
+    And_intro  |>.check And_intro_ty

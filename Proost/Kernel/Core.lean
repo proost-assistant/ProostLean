@@ -53,6 +53,7 @@ deriving BEq,Repr
 
 inductive Neutral : Type :=
   | var : Nat → Neutral
+  | fvar : Nat → Neutral
   | ax : Axiom → Array Level → Neutral
 deriving BEq, Repr
 
@@ -88,7 +89,7 @@ abbrev VarContext := Array $ Option Term
 structure TCContext where
   const_con : ConstContext := default
   var_cont : VarContext := default
-  debug : Bool := false
+  debug : List String := []
 deriving Inhabited
 
 
@@ -130,8 +131,8 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
   | .ok _ st
   | .error _ st => st
 
-def add_trace (tr : String): TCEnv Unit := do
-    if (← read).debug then dbg_trace s!"\n{tr}"
+def add_trace (ty : String) (tr : String): TCEnv Unit := do
+    if ty ∈ (← read).debug || "all" ∈ (← read).debug then dbg_trace s!"\n{tr}"
 
 def with_add_const (name : String) (c : Const) (u : TCEnv α) : TCEnv α := do
     if let some _ := (← read).const_con.find? name then
@@ -155,13 +156,6 @@ instance (priority := high) : MonadExceptOf TCError TCEnv where
 
 def withadd_var_to_context_no_shift (t : Option Term) : TCEnv α →TCEnv α  :=
     withReader λ con => {con with var_cont := con.var_cont.push t}
-
-def reduce_decl (s : String) : TCEnv Term := do
-  let res := (← read).const_con.find? s
-  if let some $ .de d := res then
-    return d.term
-  else
-    throw $ .unknownConstant s
 
 class GetType (A: Type) where
   get_type : A → TCEnv Term

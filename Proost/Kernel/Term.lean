@@ -6,7 +6,7 @@ namespace Term
 -- Only partial because structural recursion on nested inductives is broken
 partial def shift (offset depth : Nat) : Term → Term
   | var n => 
-    let n := if n > depth then n+offset else n
+    let n := if n >= depth then n+offset else n
     var n
   | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
   | abs ty body =>
@@ -23,7 +23,7 @@ partial def shift (offset depth : Nat) : Term → Term
 
 partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
-      | .eq => sub.shift depth.pred 0
+      | .eq => sub.shift depth.pred 1
       | .gt => var (n-1)
       | .lt => var n
   | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
@@ -58,20 +58,23 @@ partial def substitute_univ (lvl : Array Level) : Term → Term
 --#eval Term.prod (.var 4) (.prod (.var 4) (.var 2)) |>.shift 1 0
 
 
-/-
-partial def whnf (t : Term) : TCEnv Term := match t with
+def reduce_decl : Term → TCEnv Term
+  | t@(const s arr) => do
+    let res := (← read).const_con.find? s
+    if let some $ .de d := res then
+      return d.term |>.substitute_univ arr
+    else
+      return t
+  | t => pure t
+
+partial def whnf (t : Term) : TCEnv Term := do  match ← reduce_decl t with
   | app t₁ t₂ => do
-    if let abs _ body := ← whnf t₁ then whnf $ body.substitute t₂ 1
+    if let abs _ body := ← whnf (← reduce_decl t₁) then 
+      whnf $ body.substitute t₂ 1
     else pure t
-  | const s => do
-    try
-      reduceDecl s
-    catch
-      | .unknownConstant _ => pure t
-      | _ => unreachable!
   | _ => pure t
 
-
+/-
 def is_relevant (closure : List Term): Term → TCEnv Bool 
   | var x => do
     if let some t := closure.get? x then 
@@ -84,3 +87,33 @@ def is_relevant (closure : List Term): Term → TCEnv Bool
   | _ => pure false
 
 end Term -/
+
+#eval {debug := ["nbe"]} |> do
+  let And : Term := 
+    .abs (some .prop) $ 
+    .abs (some .prop) $ 
+    .prod .prop $ 
+    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
+    .var 2
+  let And_ty : Term := .prod .prop
+    $ .prod .prop
+    $ .prop
+
+  let And_intro : Term :=
+    .abs (some .prop) $ 
+    .abs (some .prop) $ 
+    .abs (some $ .var 2) $ 
+    .abs (some $ .var 2) $ 
+    .abs (some .prop) $ 
+    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
+    .app (.app (.var 1) (.var 4)) (.var 3)
+  let And_intro_ty : Term :=
+    .prod .prop $ 
+    .prod .prop $ 
+    .prod (.var 2) $ 
+    .prod (.var 2) $ 
+    .app (.app And (.var 4)) (.var 3)
+
+  let And_decl : Decl := ⟨And_ty,0,And⟩
+  with_add_decl "And" And_decl $
+    (Term.app And (.var 4)) |>.whnf

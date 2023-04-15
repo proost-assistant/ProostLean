@@ -1,7 +1,7 @@
 import Proost
 open Lean
 
-def type_check_file (file : String) (debug : Bool): IO Unit := do
+def type_check_file (file : String) (debug : List String): IO Unit := do
   let code ← IO.FS.readFile ⟨file⟩ 
   initSearchPath (← Lean.findSysroot) ["build/lib"]
   let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
@@ -21,7 +21,9 @@ def main (args : List String) : IO Unit :=
   match args with
   | [] => return
   | h::t => do
-    type_check_file h ("--debug" ∈ args)
+    let debug_tags := 
+      if "--debug" ∈ args then ["all"] else []
+    type_check_file h debug_tags
     main t
 
-#eval main ["tests\\connectives.mdln","--debug"]
+#eval main ["tests/connectives.mdln"]
