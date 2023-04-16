@@ -67,12 +67,15 @@ def reduce_decl : Term → TCEnv Term
       return t
   | t => pure t
 
-partial def whnf (t : Term) : TCEnv Term := do  match ← reduce_decl t with
-  | app t₁ t₂ => do
-    if let abs _ body := ← whnf (← reduce_decl t₁) then 
-      whnf $ body.substitute t₂ 1
-    else pure t
-  | _ => pure t
+partial def whnf (t : Term) : TCEnv Term := do 
+  let res ← match ← reduce_decl t with
+    | app t₁ t₂ => do
+      if let abs _ body := ← whnf (← reduce_decl t₁) then 
+        whnf $ body.substitute t₂ 1
+      else pure t
+    | t => pure t
+  add_trace "whnf" s!"{t} reduces to {res} in env {repr (← read).const_con.toArray}"
+  return res
 
 /-
 def is_relevant (closure : List Term): Term → TCEnv Bool 
@@ -88,32 +91,33 @@ def is_relevant (closure : List Term): Term → TCEnv Bool
 
 end Term -/
 
-#eval {debug := ["nbe"]} |> do
-  let And : Term := 
-    .abs (some .prop) $ 
-    .abs (some .prop) $ 
-    .prod .prop $ 
-    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
-    .var 2
-  let And_ty : Term := .prod .prop
-    $ .prod .prop
-    $ .prop
-
-  let And_intro : Term :=
-    .abs (some .prop) $ 
-    .abs (some .prop) $ 
-    .abs (some $ .var 2) $ 
-    .abs (some $ .var 2) $ 
-    .abs (some .prop) $ 
-    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
-    .app (.app (.var 1) (.var 4)) (.var 3)
-  let And_intro_ty : Term :=
-    .prod .prop $ 
-    .prod .prop $ 
-    .prod (.var 2) $ 
-    .prod (.var 2) $ 
-    .app (.app And (.var 4)) (.var 3)
-
-  let And_decl : Decl := ⟨And_ty,0,And⟩
-  with_add_decl "And" And_decl $
-    (Term.app And (.var 4)) |>.whnf
+--#eval {debug := ["nbe"]} |> do
+--  let And : Term := 
+--    .abs (some .prop) $ 
+--    .abs (some .prop) $ 
+--    .prod .prop $ 
+--    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
+--    .var 2
+--  let And_ty : Term := .prod .prop
+--    $ .prod .prop
+--    $ .prop
+--
+--  let And_intro : Term :=
+--    .abs (some .prop) $ 
+--    .abs (some .prop) $ 
+--    .abs (some $ .var 2) $ 
+--    .abs (some $ .var 2) $ 
+--    .abs (some .prop) $ 
+--    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
+--    .app (.app (.var 1) (.var 4)) (.var 3)
+--  let And_intro_ty : Term :=
+--    .prod .prop $ 
+--    .prod .prop $ 
+--    .prod (.var 2) $ 
+--    .prod (.var 2) $ 
+--    .app (.app And (.var 4)) (.var 3)
+--
+--  let And_decl : Decl := ⟨And_ty,0,And⟩
+--  with_add_decl "And" And_decl $
+--    Term.app (Term.app (.const "And" #[]) (.var 4)) (.var 3) |>.whnf
+--
