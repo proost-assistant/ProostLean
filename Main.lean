@@ -12,7 +12,7 @@ def type_check_file (file : String) (debug : List String): IO Unit := do
   let core ← IO.ofExcept $ raw.toCore
   println! "elaboration succeeded !\n Term produced:\n  {core}"
   let ctx : TCContext:= ⟨default,default,debug⟩
-  let eval_commands := evalCommands core (pure ()) ctx
+  let eval_commands := evalCommands core ctx
   if let .error e := eval_commands then
     throw $ IO.Error.userError $ ToString.toString e
   println! "success"
@@ -23,7 +23,7 @@ def main (args : List String) : IO Unit :=
   | h::t => do
     let debug_tags := 
       if "--debug" ∈ args then ["all"] else []
-    type_check_file h debug_tags
+    type_check_file h ["whnf","cmd"]
     main t
 
 #eval main ["tests/connectives.mdln"]

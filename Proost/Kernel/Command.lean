@@ -1,6 +1,8 @@
 import Proost.Kernel.TypeChecker
+import Proost.Kernel.Core
 
-def evalCommand (c : Command) (u : TCEnv α): TCEnv α := do
+
+def evalCommand (c : Command) : TCEnv ConstContext := do
   match c with
   | .def s n_of_univ ty te => do
     let typ : Term ← 
@@ -9,14 +11,20 @@ def evalCommand (c : Command) (u : TCEnv α): TCEnv α := do
         pure ty
       else te.infer 
     let decl : Decl := ⟨typ,n_of_univ,te⟩ 
-    with_add_decl s decl u
+    add_trace "cmd" s!"adding decl {s} to the env"
+    return (← read).const_con.insert s (.de decl)
   | .axiom s n_of_univ ty => do
     ty.is_type 
-    with_add_axiom ⟨s,ty,n_of_univ⟩ u
+     return (← read).const_con.insert s (.ax ⟨s,ty,n_of_univ⟩)
   | .check t => do
     let _ ← t.infer
-    u
-  | _ => u
+    return (← read).const_con
+  | _ => return (← read).const_con
 
-def evalCommands (cs : Commands) (u : TCEnv α): TCEnv α := do
-  List.foldlM (λ u c => dbg_trace s!"evaluating command {c}";evalCommand c (pure u)) (← u) cs
+def evalCommands (cs : Commands) : TCEnv ConstContext := do
+  List.foldlM 
+    (λ u c => do
+      add_trace "cmd" s!"evaluating command {c} in env {repr u.toArray}"
+      evalCommand c {const_con := u} ) 
+    (← read).const_con
+    cs

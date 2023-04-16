@@ -72,10 +72,12 @@ structure Decl : Type where
   type : Term
   n_of_univ : Nat
   term : Term
+deriving Repr
 
 inductive Const  : Type:=
   | ax : Axiom → Const
   | de : Decl  → Const
+deriving Repr
 
 def Const.type : Const → Term
   | .ax a | .de a => a.type
@@ -114,7 +116,7 @@ instance : ToString TCError where
     | .unboundDeBruijnIndex n con => s!"unbound De Bruijn index {n} in context {con}"
     | .unknownConstant c => s!"unknown constant {c}"
     | .notASort t => s!"expected a sort, found {t}"
-    | .notDefEq t₁ t₂ => s!"{t₁} and {t₂} are not definitionally equal"
+    | .notDefEq t₁ t₂ => s!"{repr t₁} and {repr t₂} are not definitionally equal"
     | .wrongArgumentType f exp (t,ty)=> s!"function {f} expects an argument of type {exp}, received argument {t} of type {ty}"
     | .cannotInfer t => s!"cannot infer type of term {t}"
     | .alreadyDefined s => s!"{s} is already defined"
@@ -134,19 +136,26 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
 def add_trace (ty : String) (tr : String): TCEnv Unit := do
     if ty ∈ (← read).debug || "all" ∈ (← read).debug then dbg_trace s!"\n{tr}"
 
-def with_add_const (name : String) (c : Const) (u : TCEnv α) : TCEnv α := do
+def with_add_const (name : String) (c : Const) (u : α) : TCEnv α := do
+    add_trace "cmd" s!"adding const {name} to the env"
     if let some _ := (← read).const_con.find? name then
       throw $  .alreadyDefined name
-    withReader (λ con => {con with const_con := HashMap.insert con.const_con name c}) u
+    withReader 
+      (λ con : TCContext => 
+        let res : TCContext := {const_con := con.const_con.insert name c}
+        dbg_trace s!"{repr res.const_con.toArray}"
+        res
+      )
+      (pure u)
 
-def with_add_decl (name : String) (d: Decl) (u : TCEnv α)  :  TCEnv α := 
-    with_add_const name (.de d) u
+def with_add_decl (name : String) (d: Decl) : α → TCEnv α := 
+    with_add_const name (.de d)
 
-def with_add_axiom (a : Axiom) (u : TCEnv α)  :  TCEnv α := do
-    with_add_const a.name (.ax a) u
+def with_add_axiom (a : Axiom) : α →  TCEnv α := 
+    with_add_const a.name (.ax a)
 
-def with_add_axioms (a : List Axiom) (u : TCEnv α) : TCEnv α := do
-  a.foldlM (fun u ax => with_add_axiom ax (pure u)) (← u)
+def with_add_axioms (a : List Axiom) : α → TCEnv α :=
+  a.foldlM (fun u ax => with_add_axiom ax u)
 
 instance (priority := high) : MonadExceptOf TCError TCEnv where
   throw err := do
@@ -162,12 +171,12 @@ class GetType (A: Type) where
 
 def get_const_type (s : String) (arr : Array Level): TCEnv Term := do
   let res := (← read).const_con.find? s
-  if let some $ c := res then
-    if c.n_of_univ != arr.size then
-      throw $ .wrongNumberOfUniverse s c.n_of_univ arr.size
-    return c.type
-  else
-    throw $ .unknownConstant s
+  let some $ c := res | throw $ .unknownConstant s
+  if c.n_of_univ != arr.size then
+    throw $ .wrongNumberOfUniverse s c.n_of_univ arr.size
+  return c.type --todo substitute univ
+  
+    
 instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
