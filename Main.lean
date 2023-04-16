@@ -23,7 +23,7 @@ def main (args : List String) : IO Unit :=
   | h::t => do
     let debug_tags := 
       if "--debug" ∈ args then ["all"] else []
-    type_check_file h ["whnf","cmd"]
+    type_check_file h []
     main t
 
 #eval main ["tests/connectives.mdln"]

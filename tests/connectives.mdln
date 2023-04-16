@@ -2,3 +2,33 @@ def And (A B: Prop): Prop := (C: Prop) -> (A -> B -> C) -> C
 
 def and_intro (A B: Prop): A -> B -> And A B :=
  fun a: A, b: B, C: Prop, f: A -> B -> C => f a b
+
+def and_elim_l (A B: Prop): And A B -> A :=
+  fun f: And A B => f A (fun a: A, b: B => a)
+
+def and_elim_r (A B: Prop) : And A B -> B :=
+  fun f: And A B => f B (fun a: A, b: B => b)
+
+def and_comm (A B: Prop): (And A B) -> (And B A) :=
+  fun f: (And A B), C: Prop, bac: (B -> A -> C) => f C (fun a:A, b:B => bac b a)
+
+def Or (A B: Prop): Prop := (C: Prop) -> (A -> C) -> (B -> C) -> C
+
+def or_intro_l (A B: Prop): A -> Or A B :=
+  fun a: A, C: Prop, fAC: A -> C, fBC: B -> C => fAC a
+
+def or_intro_r (A B: Prop): B -> Or A B :=
+  fun b: B, C: Prop, fAC: A -> C, fBC: B -> C => fBC b
+
+def or_comm (A B: Prop): (Or A B) -> Or B A :=
+  (fun orAB: (Or A B), C: Prop, fBC: B -> C, fAC: A -> C =>
+    orAB C fAC fBC)
+
+def False : Prop := (P : Prop) -> P
+
+def Not (P: Prop) : Prop := P -> False
+
+def Iff (P Q: Prop):  Prop := And (P -> Q) (Q -> P)
+
+def iff_intro (P Q: Prop) (PQ: P -> Q) (QP: Q -> P) : Iff P Q :=
+  and_intro (P -> Q) (Q -> P) PQ QP

@@ -16,7 +16,7 @@ syntax:11 "(" proost ")" : proost
 syntax:11 "(" proost ":" proost ")" : proost
 syntax:11 "fun" (ident* (":" proost)?),* "=>" proost : proost 
 syntax:11 "(" ident* ":" proost ")" "->" proost : proost
-syntax:11 proost "->" proost : proost
+syntax:10 proost:10 "->" proost:9 : proost
 syntax:10 proost:10 proost:11 : proost
 syntax:11 "Prop" : proost
 syntax:11 "Type" (proost_level)? : proost
