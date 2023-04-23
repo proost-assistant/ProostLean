@@ -5,35 +5,50 @@ import Proost.Util.Misc
 
 set_option autoImplicit false
 open GetType
---partial def Value.is_prop_type : Value → TCEnv Bool
---  | abs ..
---  | sort .. => pure false
---  | prod _ cod => do (← Term.eval cod.closure cod.term).is_prop_type cod.closure
---  | neutral (.ax a arr) _ => pure $ (a.type |>.substitute_univ arr) == .sort 0
---  | neutral (.var x) _ =>
---      if let some b := closure.get? x |>.map (·.is_prop_type closure)
---      then b else pure false
---
---mutual
---  partial def Neutral.is_irrelevant : Neutral → TCEnv Bool
---    | .ax a arr => (a.type |>.substitute_univ arr).eval closure >>= Value.is_prop_type closure
---    | .var x =>       if let some b := closure.get? x |>.map (·.is_prop_type closure)
---      then b else pure false
---
---  partial def Value.is_irrelevant : Value → TCEnv Bool
---    | .neutral ne _ => ne.is_irrelevant closure
---    | .abs _ body => do (← Term.eval body.closure body.term).is_irrelevant body.closure
---    | _ => pure false
---end
 
+def Term.is_prop_type :Term → TCEnv Bool
+  | .var i => do
+    let ty ← get_type i
+    let ty ← ty.whnf
+    return ty == Term.prop
+  | .prod t₁ t₂ =>
+    with_add_var_to_context (some t₁) $ do
+      t₂.is_prop_type
+  | .const s arr => do
+    let ty ← get_type (s,arr)
+    let ty ← ty.whnf
+    return ty == Term.prop
+  | _ => return false
+
+
+inductive relevance :=
+  | relevant
+  | irrelevant
+deriving DecidableEq
+
+def Term.relevance :Term → TCEnv relevance
+  | .abs t body => 
+    with_add_var_to_context t $ do
+      body.relevance
+  | .var i => do
+    let ty ← get_type i
+    let is_prop ← ty.is_prop_type
+    return if is_prop then .irrelevant else .relevant
+  | .ann t _ => t.relevance -- ty.is_prop_type ?
+  | .app f _ => f.relevance
+  | _ => return .relevant
+
+
+--assumption : `lhs` and `rhs` are well-typed and of the same type
 partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
   add_trace "conversion" s!"checking {lhs} = {rhs}"
   let lhs := lhs.noAnn
   let rhs := rhs.noAnn
   if lhs == rhs then
     return true
-  --if !lhs.is_relevant then
-  --  return true
+  let relevance ← lhs.relevance 
+  if relevance == .irrelevant then
+    return true
   let lhs ←  lhs.whnf
   let rhs ←  rhs.whnf
 
@@ -41,9 +56,7 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
     return true
 
   match lhs,rhs with
-    | .sort l₁, .sort l₂ => 
-      add_trace "conversion" "checking {l₁} = {l₂}"
-      pure $ l₁.is_eq l₂
+    | .sort l₁, .sort l₂ => pure $ l₁.is_eq l₂
     | .var i, .var j => pure $ i == j
     | .abs _ t₁, .abs _ t₂ => conversion t₁ t₂
     | .prod t₁ u₁, .prod t₂ u₂
