@@ -32,3 +32,6 @@ def Iff (P Q: Prop):  Prop := And (P -> Q) (Q -> P)
 
 def iff_intro (P Q: Prop) (PQ: P -> Q) (QP: Q -> P) : Iff P Q :=
   and_intro (P -> Q) (Q -> P) PQ QP
+
+def contrapose (A B: Prop): (A -> B) -> (Not B -> Not A) :=
+  fun f: A -> B, nB: (Not B), a: A => nB (f a)

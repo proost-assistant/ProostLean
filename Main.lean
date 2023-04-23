@@ -1,7 +1,7 @@
 import Proost
 open Lean
 
-def type_check_file (file : String) (debug : List String): IO Unit := do
+def type_check_file (file : String) (opts : CallOptions): IO Unit := do
   let code ← IO.FS.readFile ⟨file⟩ 
   initSearchPath (← Lean.findSysroot) ["build/lib"]
   let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
@@ -11,19 +11,31 @@ def type_check_file (file : String) (debug : List String): IO Unit := do
   println! "elaborating"
   let core ← IO.ofExcept $ raw.toCore
   println! "elaboration succeeded !\n Term produced:\n  {core}"
-  let ctx : TCContext:= ⟨default,default,debug⟩
+  let ctx : TCContext:= ⟨default,default,opts.debug⟩
   let eval_commands := evalCommands core ctx
   if let .error e := eval_commands then
     throw $ IO.Error.userError $ ToString.toString e
   println! "success"
 
-def main (args : List String) : IO Unit :=
-  match args with
-  | [] => return
-  | h::t => do
-    let debug_tags := 
-      if "--debug" ∈ args then ["all"] else []
-    type_check_file h []
-    main t
+structure Main_call where
+  files : List String
+  options : List (String × List String)
 
-#eval main ["tests/connectives.mdln"]
+def get_options (input : String) : Main_call := Id.run do
+  let split := input.splitOn "--" |>.map (·.splitOn)
+  let files::options := split | ⟨[],[]⟩
+  let options := options.map (λ l => match l with
+    | opt::args => (opt,args)
+    | [] => panic! "unexpected input"
+  ) 
+  ⟨files,options⟩
+
+def main : IO Unit := do
+  let line ← IO.getStdin
+  let line ← line.getLine
+  let ⟨files,_options⟩ := get_options line
+  let options := default
+  for file in  files  do
+    type_check_file file options
+
+--#eval main ["tests/connectives.mdln"]
