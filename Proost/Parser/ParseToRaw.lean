@@ -3,7 +3,7 @@ import Proost.Elab.Raw
 import Proost.Util.Misc
 import Lean
 
-open Lean Elab Meta
+open Lean Elab Meta Term
 
 partial def elabLevel (stx : TSyntax `proost_level) : Except String RawLevel := do
   match stx with

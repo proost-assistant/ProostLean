@@ -1,0 +1,8 @@
+def is_zero := Nat_rec.{1} (fun n: Nat => Prop) True (fun n: Nat, p: Prop => False)
+
+def add := fun x: Nat => Nat_rec.{1}
+    (fun a : Nat => Nat) x (fun a n: Nat => Succ n)
+
+def two := succ (succ zero)
+
+eval add two two

@@ -64,7 +64,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       return .abs ty t
     | varconst s #[] => 
       let some posx := (← read).vars.position s | return .const s #[]
-      dbg_trace s!"looking for DB var of {s} in {(← read).vars}, found {posx}"
+      --dbg_trace s!"looking for DB var of {s} in {(← read).vars}, found {posx}"
       return .var posx.succ
     | varconst s arr =>
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
@@ -78,11 +78,6 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       return .app (.abs ty body) t
 
 abbrev RawCommandEnv := Except RawError
-
-instance : Coe (EStateM.Result ε σ α) (Except ε α) where
-  coe 
-    | .ok x _ => .ok x
-    | .error e _ => .error e
 
 def map_univs : List String → EStateM RawError (HashMap String Nat) Unit
     | [] => return

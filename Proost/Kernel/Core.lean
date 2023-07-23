@@ -89,11 +89,10 @@ abbrev ConstContext := HashMap String Const
 abbrev VarContext := Array $ Option Term
 
 structure TCContext where
-  const_con : ConstContext := default
-  var_cont : VarContext := default
+  const_ctx : ConstContext := default
+  var_ctx : VarContext := default
   debug : List String := []
 deriving Inhabited
-
 
 abbrev TypedTerm := Term × Term
 
@@ -136,26 +135,26 @@ def EStateM.Result.get : EStateM.Result ε σ α → σ
 def add_trace (ty : String) (tr : String): TCEnv Unit := do
     if ty ∈ (← read).debug || "all" ∈ (← read).debug then dbg_trace s!"\n{tr}"
 
-def with_add_const (name : String) (c : Const) (u : α) : TCEnv α := do
+def with_add_const (name : String) (c : Const) (u : TCEnv α) : TCEnv α := do
     add_trace "cmd" s!"adding const {name} to the env"
-    if let some _ := (← read).const_con.find? name then
+    if let some _ := (← read).const_ctx.find? name then
       throw $  .alreadyDefined name
     withReader 
       (λ con : TCContext => 
-        let res : TCContext := {const_con := con.const_con.insert name c}
-        dbg_trace s!"{repr res.const_con.toArray}"
+        let res : TCContext := {const_ctx := con.const_ctx.insert name c}
+        --dbg_trace s!"{repr res.const_ctx.toArray}"
         res
       )
-      (pure u)
+      u
 
-def with_add_decl (name : String) (d: Decl) : α → TCEnv α := 
+def with_add_decl (name : String) (d: Decl) : TCEnv α → TCEnv α := 
     with_add_const name (.de d)
 
-def with_add_axiom (a : Axiom) : α →  TCEnv α := 
+def with_add_axiom (a : Axiom) : TCEnv α →  TCEnv α := 
     with_add_const a.name (.ax a)
 
-def with_add_axioms (a : List Axiom) : α → TCEnv α :=
-  a.foldlM (fun u ax => with_add_axiom ax u)
+def with_add_axioms (a : List Axiom) : TCEnv α → TCEnv α :=
+  a.foldl (fun u ax => with_add_axiom ax u)
 
 instance (priority := high) : MonadExceptOf TCError TCEnv where
   throw err := do
@@ -164,23 +163,31 @@ instance (priority := high) : MonadExceptOf TCError TCEnv where
   tryCatch := tryCatch
 
 def withadd_var_to_context_no_shift (t : Option Term) : TCEnv α →TCEnv α  :=
-    withReader λ con => {con with var_cont := con.var_cont.push t}
+    withReader λ con => {con with var_ctx := con.var_ctx.push t}
 
 class GetType (A: Type) where
   get_type : A → TCEnv Term
 
+partial def Term.substitute_univ (lvl : Array Level) : Term → Term
+  | sort l => sort $ l.substitute lvl
+  | var n => var n
+  | app t₁ t₂ => app (t₁.substitute_univ lvl) (t₂.substitute_univ lvl)
+  | abs ty body => abs (ty.map (substitute_univ lvl)) (body.substitute_univ lvl)
+  | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
+  | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
+  | const s arr => const s $ arr.map (Level.substitute · lvl)
+
 def get_const_type (s : String) (arr : Array Level): TCEnv Term := do
-  let res := (← read).const_con.find? s
+  let res := (← read).const_ctx.find? s
   let some $ c := res | throw $ .unknownConstant s
   if c.n_of_univ != arr.size then
     throw $ .wrongNumberOfUniverse s c.n_of_univ arr.size
-  return c.type --todo substitute univ
-  
+  return c.type.substitute_univ arr --todo substitute univ
     
 instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
-  let ctx := (← read).var_cont
+  let ctx := (← read).var_ctx
   let some optty := ctx.get? (ctx.size - n) | unreachable!
   let some ty := optty | throw $ .unTypedVariable n ctx
   pure ty

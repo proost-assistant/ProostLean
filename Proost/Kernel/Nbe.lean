@@ -44,7 +44,7 @@ mutual
         add_trace "nbe" s!"Unbound index {x} with closure {closure}"
         return .neutral (.fvar x) []
     | .const s arr => do
-        let res := (← read).const_con.find? s
+        let res := (← read).const_ctx.find? s
         match res with
           | some (.ax a) => pure $ .neutral (.ax a arr) []
           | some (.de d) => d.term |>.substitute_univ arr |>.eval closure
@@ -77,7 +77,7 @@ partial def read_back (size : Nat) (x : Value): TCEnv Term := do
     add_trace "nbe" s!"{x}\n reads back to\n {res}"
     return res
 
-def Term.whnf (t : Term): TCEnv Term := do
+def Term.whnf₂ (t : Term): TCEnv Term := do
   let v ← t.eval []
   read_back 0 v
 
@@ -108,5 +108,5 @@ def Term.whnf (t : Term): TCEnv Term := do
     .app (.app And (.var 4)) (.var 3)
 
   let And_decl : Decl := ⟨And_ty,0,And⟩
-  with_add_decl "And" And_decl $
-    (Term.app And (.var 4)) |>.whnf
+  (with_add_decl "And" And_decl $
+    (Term.app And (.var 4)) |>.whnf default)

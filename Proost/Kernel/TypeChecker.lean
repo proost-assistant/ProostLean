@@ -78,7 +78,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
 
 mutual
 partial def infer (t : Term): TCEnv Term := do
-  add_trace "tc" s!"trying to infer the type of {t} in var_env {(← read).var_cont}"
+  add_trace "tc" s!"trying to infer the type of {t} in var_env {(← read).var_ctx}"
   let res ← match t with
   | ann t ty => do
     check t ty
@@ -112,11 +112,11 @@ partial def infer (t : Term): TCEnv Term := do
 
 
 partial def check (t ty : Term):  TCEnv Unit := do
-  add_trace "tc" s!"checking {t} : {ty} in var_env {(← read).var_cont}"
+  add_trace "tc" s!"checking {t} : {ty} in var_env {(← read).var_ctx}"
   match t,ty with
   | .abs none body, .prod a b => do
     with_add_var_to_context (some a) $
-    check  body b
+    check body b
   | .abs (some ty) body, .prod a b => do
     is_def_eq a ty
     with_add_var_to_context (some a) $

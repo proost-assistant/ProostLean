@@ -10,5 +10,8 @@ def axioms : List Axiom :=
     nat_axioms
   ] |>.join
 
+@[inline]
+def red_recs : List RedRec := []
 
-def initialize_env : TCEnv α →TCEnv α := with_add_axioms axioms
+def with_initialize_env_axioms : TCEnv α → TCEnv α := with_add_axioms axioms
+

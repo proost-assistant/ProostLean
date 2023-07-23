@@ -1,21 +1,23 @@
 import Proost
 open Lean
 
-def type_check_file (file : String) (opts : CallOptions): IO Unit := do
+def type_check_file (file : String) (_opts : CallOptions): IO Unit := do
   let code ← IO.FS.readFile ⟨file⟩ 
   initSearchPath (← Lean.findSysroot) ["build/lib"]
   let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
-  println! "parsing {file}"
+  --println! "parsing {file}"
   let raw ← IO.ofExcept $ parse code env
-  println! "parsing succeeded !\n Term produced:\n  {raw}"
-  println! "elaborating"
+  --println! "parsing succeeded !\n Commands produced:\n  {raw}"
+  --println! "elaborating"
   let core ← IO.ofExcept $ raw.toCore
-  println! "elaboration succeeded !\n Term produced:\n  {core}"
-  let ctx : TCContext:= ⟨default,default,opts.debug⟩
-  let eval_commands := evalCommands core ctx
+  --println! "elaboration succeeded !\n Term produced:\n  {core}"
+  let ctx : TCContext := {debug := ["print","tc"]}
+  let eval_commands := 
+    (with_initialize_env_axioms <| evalCommands core)
+    ctx
   if let .error e := eval_commands then
     throw $ IO.Error.userError $ ToString.toString e
-  println! "success"
+  --println! "success"
 
 structure Main_call where
   files : List String
@@ -38,4 +40,4 @@ def main : IO Unit := do
   for file in  files  do
     type_check_file file options
 
---#eval main ["tests/connectives.mdln"]
+#eval type_check_file "tests/nat.mdln" ⟨["print"]⟩

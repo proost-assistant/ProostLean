@@ -1,6 +1,8 @@
 import Proost.Kernel.Level
 import Proost.Kernel.Core
+import Std.Data.HashMap
 
+open Std
 namespace Term
 
 -- Only partial because structural recursion on nested inductives is broken
@@ -40,84 +42,76 @@ partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | sort l => sort l
 
 def with_add_var_to_context (t : Option Term) : TCEnv α → TCEnv α:= 
-    withReader λ con => {con with var_cont := con.var_cont|>.push t |>.map (.map $ Term.shift 1 0) }
+    withReader λ con => {con with var_ctx := con.var_ctx|>.push t |>.map (.map $ Term.shift 1 0) }
 
 def noAnn : Term → Term
   | ann t _ => t
   | t => t
 
-partial def substitute_univ (lvl : Array Level) : Term → Term
-  | sort l => sort $ l.substitute lvl
-  | var n => var n
-  | app t₁ t₂ => app (t₁.substitute_univ lvl) (t₂.substitute_univ lvl)
-  | abs ty body => abs (ty.map (substitute_univ lvl)) (body.substitute_univ lvl)
-  | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
-  | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
-  | const s arr => const s $ arr.map (Level.substitute · lvl)
-
---#eval Term.prod (.var 4) (.prod (.var 4) (.var 2)) |>.shift 1 0
-
-
 def reduce_decl : Term → TCEnv Term
   | t@(const s arr) => do
-    let res := (← read).const_con.find? s
+    let res := (← read).const_ctx.find? s
     if let some $ .de d := res then
       return d.term |>.substitute_univ arr
     else
       return t
   | t => pure t
 
+def sep_fn_args : Term →  Term × Array Term
+  | .app f arg =>
+    let ⟨f,args⟩ := f.sep_fn_args
+    ⟨f,args.push arg⟩
+  | t => ⟨t,#[]⟩
+
+def appN : Term → Array Term → Term := fun hd arr =>
+  arr.foldr (λ f x => app f x) hd
+
+def RedRecs := HashMap String (Term → TCEnv (Option Term))
+
+def red_rec (m : RedRecs)(s : String) (t : Term): TCEnv Term := do
+  let some rec := m.find? s | pure t
+  let some t ← rec t | pure t
+  pure t
+
+mutual
+
 partial def whnf (t : Term) : TCEnv Term := do 
-  let res ← match ← reduce_decl t with
-    | app t₁ t₂ => do
-      if let abs _ body := ← whnf (← reduce_decl t₁) then 
-        whnf $ body.substitute t₂ 1
-      else pure t
-    | t => pure t
-  add_trace "whnf" s!"{t} reduces to {res} in env {repr (← read).const_con.toArray}"
-  return res
+  let res ← do
+    let t ← reduce_decl t
+    match t with
+      | app t₁ t₂ => do
+        let t₁ ← whnf (← reduce_decl t₁)
+        match t₁ with
+          | abs _ body =>
+            whnf $ body.substitute t₂ 1
+          | const s _ => red_rec (all_recs ()) s (.app t₁ t₂)
+          | _ => pure $ .app t₁ t₂
+      | _ => pure t
+  dbg_trace s!"{t}\n reduces to \n{res}"
+  pure res
 
-/-
-def is_relevant (closure : List Term): Term → TCEnv Bool 
-  | var x => do
-    if let some t := closure.get? x then 
-      t.is_relevant closure
-    else 
-      throw $ .unboundDeBruijnIndex x closure
-  | abs _ body => body.is_relevant closure
-  | app t _ => t.is_relevant closure
-  | const s => do return (← (← getType s).whnf) == sort 0
-  | _ => pure false
 
-end Term -/
 
---#eval {debug := ["nbe"]} |> do
---  let And : Term := 
---    .abs (some .prop) $ 
---    .abs (some .prop) $ 
---    .prod .prop $ 
---    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
---    .var 2
---  let And_ty : Term := .prod .prop
---    $ .prod .prop
---    $ .prop
---
---  let And_intro : Term :=
---    .abs (some .prop) $ 
---    .abs (some .prop) $ 
---    .abs (some $ .var 2) $ 
---    .abs (some $ .var 2) $ 
---    .abs (some .prop) $ 
---    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
---    .app (.app (.var 1) (.var 4)) (.var 3)
---  let And_intro_ty : Term :=
---    .prod .prop $ 
---    .prod .prop $ 
---    .prod (.var 2) $ 
---    .prod (.var 2) $ 
---    .app (.app And (.var 4)) (.var 3)
---
---  let And_decl : Decl := ⟨And_ty,0,And⟩
---  with_add_decl "And" And_decl $
---    Term.app (Term.app (.const "And" #[]) (.var 4)) (.var 3) |>.whnf
---
+--temporary, very ugly solution to having recursors reduce 
+--before having a general induction/recursion setting.
+@[inline]
+partial def all_recs : Unit →  HashMap String (Term → TCEnv (Option Term)) := λ () =>
+  HashMap.empty.insert "Nat_rec" reduce_nat_rec
+
+partial def reduce_nat_rec (t: Term) : TCEnv (Option Term) := do
+  let no := pure none
+  let ⟨hd,arr⟩:= t.sep_fn_args
+  let hd@(.const "Nat_rec" _) ← whnf hd | no
+  let some n := arr[3]? | no
+  dbg_trace arr.size
+  match ← whnf n with
+    | .const "zero" _ => pure arr[1]!
+    | .app s k =>
+        let .const "succ" _ ← whnf s | no
+        let p_succ := arr[2]! 
+        let new_rec_args := arr[0:arr.size-1]
+        let new_rec_args := new_rec_args.as.push k
+        return some $ .app (.app p_succ k) (hd.appN new_rec_args)
+    | _ => no
+
+end

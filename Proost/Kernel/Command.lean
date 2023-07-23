@@ -12,19 +12,22 @@ def evalCommand (c : Command) : TCEnv ConstContext := do
       else te.infer 
     let decl : Decl := ⟨typ,n_of_univ,te⟩ 
     add_trace "cmd" s!"adding decl {s} to the env"
-    return (← read).const_con.insert s (.de decl)
+    return (← read).const_ctx.insert s (.de decl)
   | .axiom s n_of_univ ty => do
     ty.is_type 
-     return (← read).const_con.insert s (.ax ⟨s,ty,n_of_univ⟩)
+     return (← read).const_ctx.insert s (.ax ⟨s,ty,n_of_univ⟩)
   | .check t => do
     let _ ← t.infer
-    return (← read).const_con
-  | _ => return (← read).const_con
+    return (← read).const_ctx
+  | .eval t => 
+    let t ← t.whnf
+    dbg_trace s!"Evaluated term : {t}"
+    return (← read).const_ctx
 
 def evalCommands (cs : Commands) : TCEnv ConstContext := do
   List.foldlM 
     (λ u c => do
       add_trace "cmd" s!"evaluating command {c} in env {repr u.toArray}"
-      evalCommand c {const_con := u} ) 
-    (← read).const_con
+      evalCommand c {const_ctx := u} ) 
+    (← read).const_ctx
     cs

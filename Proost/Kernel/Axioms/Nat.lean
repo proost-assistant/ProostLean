@@ -1,4 +1,5 @@
 import Proost.Kernel.Core
+import Proost.Kernel.Term
 
 open Term
 
@@ -19,6 +20,7 @@ def succ : Axiom :=
     type := prod nat_ nat_
   }
 
+--Nat_rec : (P : Nat → Sort u) -> P 0 -> ((n : Nat) -> P n -> P (succ n)) -> () 
 def nat_rec : Axiom :=
   { name := "Nat_rec"
     type := 
@@ -34,6 +36,7 @@ def nat_rec : Axiom :=
     match n with
       | .neutral (.ax zero) []  => some P_zero
       | .neutral (.ax succ) [n] => -/
+
 
 def nat_axioms : List Axiom :=
   [nat,zero,succ,nat_rec]
