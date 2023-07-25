@@ -93,7 +93,9 @@ def substitute (l : Level) (univs : Array Level):  Level := match l with
   | l + n => plus £ l.substitute univs £ n
   | max l₁ l₂ => l₁.substitute univs |>.max $ l₂.substitute univs
   | imax l₁ l₂ => l₁.substitute univs |>.imax $ l₂.substitute univs
-  | var k => univs[k]!
+  | var k => Id.run do
+    let some l := univs[k-1]? | panic! s!"unexpected level variable {k-1}, univ list is {univs}"
+    l
 
 partial def geq_no_subst (lhs rhs : Level) (n : Int) : State := Id.run do
   let lhs := normalize lhs

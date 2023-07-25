@@ -2,31 +2,31 @@ import Proost.Kernel.Core
 
 open Term
 
-def eq : Axiom :=
+def eq : AxiomVal :=
   { name := "Eq"
     type := prod (sort $ .var 1) $ prod (var 1) $ prod (var 1) prop
   }
 
-def refl : Axiom := 
+def refl : AxiomVal := 
   { name := "refl"
     type := 
       -- (A : Sort u) -> (x : A) -> Eq.{u} A x x
       prod (sort $ .var 1) $ prod (var 1) $ const "Eq" #[.var 1] |>.app (var 2) |>.app (var 1) |>.app (var 1)
   }
 
-def cast_ : Axiom :=
+def cast_ : AxiomVal :=
   {
     name := "cast"
     type := 
-      -- (A B : Sort u) -> Eq.{u} A B -> A -> B
+      -- (A B : Sort u) -> Eq.{u+1} A B -> A -> B
         prod (sort $ .var 1) 
       $ prod (sort $ .var 1) 
-      $ prod (const "Eq" #[.succ $ .var 1] |>app (.sort (.var 1)) |>.app (var 1) |>.app (var 1)) 
+      $ prod (const "Eq" #[.succ $ .var 1] |>.app (.sort (.var 1)) |>.app (var 2) |>.app (var 1)) 
       $ prod (var 3) 
       $ var 3
   }
   
-def transport : Axiom :=
+def transport : AxiomVal :=
   {
     name := "transp"
     type :=
@@ -36,9 +36,9 @@ def transport : Axiom :=
       $ prod (var 2)
       $ prod (prod (var 3) prop)
       $ prod (app (var 1) (var 3))
-      $ prod (const "Eq" #[.succ $ .var 1] |>.app (var 4) |>.app (var 4)) 
-      $ (app (var 4) (var 4))
+      $ prod (const "Eq" #[.succ $ .var 1] |>.app (var 4) |>.app (var 3)) 
+      $ (app (var 3) (var 4))
   }
 
-def eq_axioms : List Axiom :=
+def eq_axioms : List AxiomVal :=
   [eq,refl,cast_,transport]

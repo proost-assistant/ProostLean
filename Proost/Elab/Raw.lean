@@ -1,3 +1,5 @@
+import Proost.Util.Misc
+
 inductive RawLevel : Type :=
   | num : Nat → RawLevel
   | var : String → RawLevel
@@ -33,7 +35,8 @@ def RawTerm.toString : RawTerm → String
     | type none => "Type"
     | type (some l) => s!"Type {l}"
     | sort (some l) => s!"Sort {l}"
-    | varconst s _ => s
+    | varconst s #[] => s
+    | varconst s arr => s ++ Array.toString₂ ".{" "," "}" arr
     | lam x none body => s!"λ {x} => {body.toString} "
     | lam x (some ty) body => s!"λ {x} : {ty.toString} => {body.toString}"
     | pi "_" ty body => s!"{ty.toString} → {body.toString}"

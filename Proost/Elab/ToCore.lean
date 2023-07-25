@@ -4,8 +4,10 @@ import Proost.Kernel.Core
 import Proost.Kernel.Command
 import Proost.Util.AppSep
 import Proost.Util.Queue
+import Proost.Util.Misc
 
 import Std.Data.HashMap
+
 open Std (HashMap)
 
 abbrev RawLevelEnv := ReaderT (HashMap String Nat) (Except RawError)
@@ -33,7 +35,7 @@ instance :  MonadLiftT RawLevelEnv RawTermEnv where
   monadLift {α} (a : RawLevelEnv α) := do
     fun h => liftExcept (a h.univs)
 
-partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
+def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
   --dbg_trace "elaborating :\n  {repr t} \nin env: \n  {repr (← get)}"
   match t with
     | prop | sort none => 
@@ -57,7 +59,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
         ty.toCore
       return .prod t ty
     | lam x ty t =>
-      let ty ← ty.mapM RawTerm.toCore
+      let ty ← ty.attach.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
       let t ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
         t.toCore
@@ -70,7 +72,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
       return .const s arr
     | «let» x ty t body => 
-      let ty ← ty.mapM RawTerm.toCore
+      let ty ← ty.attach.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
       let t ← t.toCore
       let body ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
@@ -85,7 +87,7 @@ def map_univs : List String → EStateM RawError (HashMap String Nat) Unit
       if let some _ := (← get).find? h then
         throw $ .duplicateUniverseVar h
       else 
-        modify (λ hm => HashMap.insert hm h hm.size.succ)
+        modify (λ hm => HashMap.insert hm h hm.size)
         map_univs t
 
 

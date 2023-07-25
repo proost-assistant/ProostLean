@@ -10,18 +10,19 @@ def evalCommand (c : Command) : TCEnv ConstContext := do
         te.check ty
         pure ty
       else te.infer 
-    let decl : Decl := ⟨typ,n_of_univ,te⟩ 
+    let decl : DefinitionVal := ⟨⟨s,typ,n_of_univ⟩,te⟩ 
     add_trace "cmd" s!"adding decl {s} to the env"
-    return (← read).const_ctx.insert s (.de decl)
+    return (← read).const_ctx.insert s (.defnDecl decl)
   | .axiom s n_of_univ ty => do
     ty.is_type 
-     return (← read).const_ctx.insert s (.ax ⟨s,ty,n_of_univ⟩)
+     return (← read).const_ctx.insert s (.axiomDecl ⟨s,ty,n_of_univ⟩)
   | .check t => do
-    let _ ← t.infer
+    let ty ← t.infer
+    add_trace "print" s!"{t} : {ty}"
     return (← read).const_ctx
   | .eval t => 
     let t ← t.whnf
-    dbg_trace s!"Evaluated term : {t}"
+    add_trace "print"  s!"Evaluated term : {t}"
     return (← read).const_ctx
 
 def evalCommands (cs : Commands) : TCEnv ConstContext := do

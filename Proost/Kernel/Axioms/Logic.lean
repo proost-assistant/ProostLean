@@ -2,23 +2,23 @@ import Proost.Kernel.Core
 
 open Term
 
-def true_ : Axiom :=
+def true_ : AxiomVal :=
   { name := "True"
     type := prop
   }
 
-def tt : Axiom :=
+def tt : AxiomVal :=
   { name := "tt"
     type := const "True" #[]
   }
 
-def false_ : Axiom :=
+def false_ : AxiomVal :=
   { name := "False"
     type := prop
   }
 
 
-def false_rec : Axiom :=
+def false_rec : AxiomVal :=
   { name := "False_rec"
     type := 
         prod (sort $ .var 1)
@@ -26,5 +26,5 @@ def false_rec : Axiom :=
       $ var 2
   }
 
-def logic_axioms : List Axiom :=
+def logic_axioms : List AxiomVal :=
   [true_,tt,false_,false_rec]

@@ -64,8 +64,8 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
     | _,_ => pure false
 
 namespace Term
-
-def is_def_eq (lhs rhs : Term) : TCEnv Unit :=
+@[export proost_is_def_eq]
+def isDefEq (lhs rhs : Term) : TCEnv Unit :=
   unless ← conversion lhs rhs do
   throw $ .notDefEq lhs rhs
 
@@ -77,6 +77,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
     | _,_ => throw $ .notASort lhs
 
 mutual
+@[export proost_infer_type]
 partial def infer (t : Term): TCEnv Term := do
   add_trace "tc" s!"trying to infer the type of {t} in var_env {(← read).var_ctx}"
   let res ← match t with
@@ -118,7 +119,7 @@ partial def check (t ty : Term):  TCEnv Unit := do
     with_add_var_to_context (some a) $
     check body b
   | .abs (some ty) body, .prod a b => do
-    is_def_eq a ty
+    isDefEq a ty
     with_add_var_to_context (some a) $
     check body b
   | .app t u, ty => do
@@ -126,19 +127,19 @@ partial def check (t ty : Term):  TCEnv Unit := do
     let .prod a b := type_t | throw $ .notAFunction₂ (t,type_t) u
     check u a
     let b := b.substitute u 1
-    is_def_eq b ty
-  | .const s arr,ty => do is_def_eq ty $ ← get_type (s,arr)
+    isDefEq b ty
+  | .const s arr,ty => do isDefEq ty $ ← get_type (s,arr)
   | .ann t ty, tty => do
     check t ty
-    is_def_eq ty tty
+    isDefEq ty tty
   | .sort l₁, .sort l₂ =>
     unless l₁+1 == l₂ do
       throw $ .notDefEq (.sort (l₁+1)) (.sort l₂)
   | .var n, ty => do
-    is_def_eq ty $ ← get_type n
+    isDefEq ty $ ← get_type n
   | t,ty => do
     let tty ← infer t
-    is_def_eq ty tty
+    isDefEq ty tty
 end
 
 def is_sort (t :Term): TCEnv Unit := do
