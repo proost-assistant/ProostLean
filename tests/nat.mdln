@@ -7,5 +7,4 @@ def two := succ (succ zero)
 
 def hmm : Eq.{1} Prop is_zero zero True := refl.{1} Prop True
 
-
 eval add two two

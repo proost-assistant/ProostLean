@@ -11,12 +11,12 @@ def type_check_file (file : String) (opts : CallOptions): IO Unit := do
   println! "elaborating"
   let core ← IO.ofExcept $ raw.toCore
   println! "elaboration succeeded !\n Term produced:\n  {core}"
-  let ctx : TCContext := {debug := opts.1}
-  let eval_commands := 
-    (with_initialize_env_axioms <| evalCommands core)
-    ctx
-  if let .error e := eval_commands then
-    throw $ IO.Error.userError $ ToString.toString e
+  --let ctx : TCContext := {debug := opts.1}
+  --let eval_commands := 
+  --  (with_initialize_env_axioms <| evalCommands core)
+  --  ctx
+  --if let .error e := eval_commands then
+  --  throw $ IO.Error.userError $ ToString.toString e
   println! "success"
 
 structure Main_call where
@@ -33,11 +33,16 @@ def get_options (input : String) : Main_call := Id.run do
   ⟨files,options⟩
 
 def main : IO Unit := do
+  println! "step 1"
   let line ← IO.getStdin
+  println! "step 2"
   let line ← line.getLine
+  println! "step 3"
   let ⟨files,_options⟩ := get_options line
+  println! "step 4"
   let options := default
   for file in  files  do
+    println! s!"checking {file}"
     type_check_file file options
 
-#eval type_check_file "tests/nat.mdln" ⟨["print","whnf"]⟩
+--#eval type_check_file "tests/nat.mdln" ⟨["print","whnf"]⟩

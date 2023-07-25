@@ -10,14 +10,12 @@ lean_exe proost where
   root := `Main
   moreLeanArgs := #[
     "-DautoImplicit=false"]
-  moreLinkArgs := #["-rdynamic"]
 
 lean_exe debug where
   root := `Main
   buildType := .debug
   moreLeanArgs := #[
     "-DautoImplicit=false"]
-  moreLinkArgs := #["-rdynamic"]
 
 
 require std from git "https://github.com/leanprover/std4" @ "dff883c55395438ae2a5c65ad5ddba084b600feb"

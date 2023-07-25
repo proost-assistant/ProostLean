@@ -60,7 +60,7 @@ def reduce_decl : Term → TCEnv Term
 
 def RedRecs := HashMap String (Term → TCEnv (Option Term))
 
-def red_rec (m : RedRecs)(s : String) (t : Term): TCEnv Term := do
+def red_rec (m : RedRecs) (s : String) (t : Term): TCEnv Term := do
   let some rec := m.find? s | pure t
   let some t ← rec t | pure t
   pure t
@@ -68,14 +68,15 @@ def red_rec (m : RedRecs)(s : String) (t : Term): TCEnv Term := do
 
 @[export proost_whnf]
 partial def whnf (t : Term) : TCEnv Term := do 
+  dbg_trace s!"reducing {t}"
   let res ← do
     let t ← reduce_decl t
     match t with
       | app t₁ t₂ => do
-        let t₁ ← whnf (← reduce_decl t₁)
+        let t₁ ← Term.whnf (← reduce_decl t₁)
         match t₁ with
           | abs _ body =>
-            whnf $ body.substitute t₂ 1
+            Term.whnf $ body.substitute t₂ 1
           | const s _ => red_rec (all_recs ()) s (.app t₁ t₂)
           | _ => pure $ .app t₁ t₂
       | _ => pure t

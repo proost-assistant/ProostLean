@@ -64,7 +64,7 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
     | _,_ => pure false
 
 namespace Term
-@[export proost_is_def_eq]
+--@[export isDefEq]
 def isDefEq (lhs rhs : Term) : TCEnv Unit :=
   unless ← conversion lhs rhs do
   throw $ .notDefEq lhs rhs
@@ -77,7 +77,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
     | _,_ => throw $ .notASort lhs
 
 mutual
-@[export proost_infer_type]
+--@[export infer]
 partial def infer (t : Term): TCEnv Term := do
   add_trace "tc" s!"trying to infer the type of {t} in var_env {(← read).var_ctx}"
   let res ← match t with

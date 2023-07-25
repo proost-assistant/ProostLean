@@ -81,32 +81,33 @@ def Term.whnf₂ (t : Term): TCEnv Term := do
   let v ← t.eval []
   read_back 0 v
 
-#eval {debug := ["nbe"]} |> do
-  let And : Term := 
-    .abs (some .prop) $ 
-    .abs (some .prop) $ 
-    .prod .prop $ 
-    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
-    .var 2
-  let And_ty : Term := .prod .prop
-    $ .prod .prop
-    $ .prop
-
-  let And_intro : Term :=
-    .abs (some .prop) $ 
-    .abs (some .prop) $ 
-    .abs (some $ .var 2) $ 
-    .abs (some $ .var 2) $ 
-    .abs (some .prop) $ 
-    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
-    .app (.app (.var 1) (.var 4)) (.var 3)
-  let And_intro_ty : Term :=
-    .prod .prop $ 
-    .prod .prop $ 
-    .prod (.var 2) $ 
-    .prod (.var 2) $ 
-    .app (.app And (.var 4)) (.var 3)
-
-  let And_decl : Decl := ⟨And_ty,0,And⟩
-  (with_add_decl "And" And_decl $
-    (Term.app And (.var 4)) |>.whnf default)
+--#eval {debug := ["nbe"]} |> do
+--  let And : Term := 
+--    .abs (some .prop) $ 
+--    .abs (some .prop) $ 
+--    .prod .prop $ 
+--    .prod (.prod (.var 3) $ .prod (.var 3) $ .var 3) $
+--    .var 2
+--  let And_ty : Term := .prod .prop
+--    $ .prod .prop
+--    $ .prop
+--
+--  let And_intro : Term :=
+--    .abs (some .prop) $ 
+--    .abs (some .prop) $ 
+--    .abs (some $ .var 2) $ 
+--    .abs (some $ .var 2) $ 
+--    .abs (some .prop) $ 
+--    .abs (some $ .prod (.var 5) $ .prod (.var 5) $ .var 3) $
+--    .app (.app (.var 1) (.var 4)) (.var 3)
+--  let And_intro_ty : Term :=
+--    .prod .prop $ 
+--    .prod .prop $ 
+--    .prod (.var 2) $ 
+--    .prod (.var 2) $ 
+--    .app (.app And (.var 4)) (.var 3)
+--
+--  let And_decl : Decl := ⟨And_ty,0,And⟩
+--  (with_add_decl "And" And_decl $
+--    (Term.app And (.var 4)) |>.whnf default)
+--

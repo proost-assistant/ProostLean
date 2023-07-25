@@ -244,6 +244,6 @@ instance : ToString Command where
 
 abbrev Commands := List Command
 
-@[extern 2 "proost_whnf"] opaque whnf : Term → TCEnv Term
-@[extern 2 "proost_infer"]  opaque infer : Term → TCEnv Term
-@[extern 3 "proost_is_def_eq"]  opaque isDefEq : Term → Term → TCEnv Bool
+@[extern "proost_whnf"] opaque whnf : Term → TCEnv Term
+--@[extern "infer"]  opaque infer : Term → TCEnv Term
+--@[extern "isDefEq"]  opaque isDefEq : Term → Term → TCEnv Bool

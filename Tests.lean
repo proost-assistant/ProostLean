@@ -8,7 +8,7 @@ def main : IO Unit :=
   let arr := IotaArr 100000000
   IO.println s!"Hello, {arr[10000]!}!"
 
-#eval main
+--#eval main
 
 
 /-syntax "open_all" ident : command
