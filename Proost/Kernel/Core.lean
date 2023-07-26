@@ -33,7 +33,7 @@ def getAppFnArgs : Term →  Term × Array Term
   | t => ⟨t,#[]⟩
 
 def mkAppN : Term → Array Term → Term := fun hd arr =>
-  arr.foldr (λ f x => app f x) hd
+  arr.foldl (λ f x => app f x) hd
 
 def n_of_univ : Term → Nat 
   | .var _ => 0
@@ -156,7 +156,7 @@ instance : ToString TCError where
     | .unboundDeBruijnIndex n con => s!"unbound De Bruijn index {n} in context {con}"
     | .unknownConstant c => s!"unknown constant {c}"
     | .notASort t => s!"expected a sort, found {t}"
-    | .notDefEq t₁ t₂ => s!"{repr t₁} and {repr t₂} are not definitionally equal"
+    | .notDefEq t₁ t₂ => s!"{t₁} \nand \n{t₂} \nare not definitionally equal"
     | .wrongArgumentType f exp (t,ty)=> s!"function {f} expects an argument of type {exp}, received argument {t} of type {ty}"
     | .cannotInfer t => s!"cannot infer type of term {t}"
     | .alreadyDefined s => s!"{s} is already defined"
@@ -222,7 +222,7 @@ instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
   let ctx := (← read).var_ctx
-  let some optty := ctx.get? (ctx.size - n) | unreachable!
+  let some optty := ctx.get? (ctx.size - n) | panic! s!"unknown free var {n}"
   let some ty := optty | throw $ .unTypedVariable n ctx
   pure ty
 instance : GetType $ Nat := ⟨get_var_type⟩

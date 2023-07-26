@@ -61,25 +61,34 @@ def reduce_decl : Term → TCEnv Term
 def RedRecs := HashMap String (Term → TCEnv (Option Term))
 
 def red_rec (m : RedRecs) (s : String) (t : Term): TCEnv Term := do
+  dbg_trace s!"trying to reduce rec {s}\n in\n {t}\n" 
   let some rec := m.find? s | pure t
-  let some t ← rec t | pure t
+  let some t ← rec t | dbg_trace s!"{s} is not a recursor"; pure t
   pure t
 
 
 @[export proost_whnf]
 partial def whnf (t : Term) : TCEnv Term := do 
-  dbg_trace s!"reducing {t}"
   let res ← do
     let t ← reduce_decl t
-    match t with
-      | app t₁ t₂ => do
-        let t₁ ← Term.whnf (← reduce_decl t₁)
-        match t₁ with
-          | abs _ body =>
-            Term.whnf $ body.substitute t₂ 1
-          | const s _ => red_rec (all_recs ()) s (.app t₁ t₂)
-          | _ => pure $ .app t₁ t₂
-      | _ => pure t
-  add_trace "whnf"  s!"{t}\n reduces to \n{res}"
+    let mut ⟨hd,args⟩ := t.getAppFnArgs
+    while true do
+      let hd₂ ← Term.whnf (← reduce_decl hd)
+      let ⟨t₁,t₂⟩ := hd₂.getAppFnArgs
+      if t₂.isEmpty then break
+      hd := t₁
+      args := t₂.append args
+    match hd with
+      | abs _ body =>
+        let mut t := body.substitute args[0]! 1
+        for arg in args[1:] do
+          t := app t arg
+          dbg_trace t
+        Term.whnf t
+      | const s _ => red_rec (all_recs ()) s $ mkAppN hd args
+      | _ => 
+        let t := mkAppN hd args
+        dbg_trace s!"can't reduce head {repr hd}\n"pure t
+  dbg_trace  s!"{t}\n reduces to \n{res}\n"
   pure res
 

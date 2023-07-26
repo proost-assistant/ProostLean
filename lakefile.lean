@@ -9,13 +9,13 @@ lean_lib Proost
 lean_exe proost where
   root := `Main
   moreLeanArgs := #[
-    "-DautoImplicit=false"]
+    "-DautoImplicit=false","-Dcompiler.enableNew=false"]
 
 lean_exe debug where
   root := `Main
   buildType := .debug
   moreLeanArgs := #[
-    "-DautoImplicit=false"]
+    "-DautoImplicit=false","-Dcompiler.enableNew=false"]
 
 
 require std from git "https://github.com/leanprover/std4" @ "dff883c55395438ae2a5c65ad5ddba084b600feb"
