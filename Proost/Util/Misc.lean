@@ -1,4 +1,4 @@
-import Std.Data.Option.Basic
+--import Std.Data.Option.Basic
 
 @[specialize]
 def List.allM₂ {m : Type → Type u} [Monad m] {α : Type v} {β : Type w} (f : α → β → m Bool) : List α → List β → m Bool
@@ -9,8 +9,8 @@ def List.allM₂ {m : Type → Type u} [Monad m] {α : Type v} {β : Type w} (f 
     | false => pure false
   | _,_ => pure false
 
-def Option.attach {α : Type _} (l : Option α) : Option { x // x ∈ l } :=
-  pmap Subtype.mk l fun _ => id
+--def Option.attach {α : Type _} (l : Option α) : Option { x // x ∈ l } :=
+--  pmap Subtype.mk l fun _ => id
 
 def todo! {A : Type _} [Inhabited A] : A := panic! "todo"
 

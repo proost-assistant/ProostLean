@@ -35,7 +35,7 @@ instance :  MonadLiftT RawLevelEnv RawTermEnv where
   monadLift {α} (a : RawLevelEnv α) := do
     fun h => liftExcept (a h.univs)
 
-def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
+partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
   --dbg_trace "elaborating :\n  {repr t} \nin env: \n  {repr (← get)}"
   match t with
     | prop | sort none => 
@@ -59,7 +59,7 @@ def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
         ty.toCore
       return .prod t ty
     | lam x ty t =>
-      let ty ← ty.attach.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
+      let ty ← ty.mapM RawTerm.toCore
       let t ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
         t.toCore
@@ -72,7 +72,7 @@ def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
       return .const s arr
     | «let» x ty t body => 
-      let ty ← ty.attach.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
+      let ty ← ty.mapM RawTerm.toCore
       let t ← t.toCore
       let body ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 

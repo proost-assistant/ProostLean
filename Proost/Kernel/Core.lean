@@ -62,11 +62,11 @@ def toString : Term → String
 
 instance : ToString Term := ⟨Term.toString⟩
 
-def substitute_univ (lvl : Array Level) : Term → Term
+partial def substitute_univ (lvl : Array Level) : Term → Term
   | sort l => sort $ l.substitute lvl
   | var n => var n
   | app t₁ t₂ => app (t₁.substitute_univ lvl) (t₂.substitute_univ lvl)
-  | abs ty body => abs (ty.attach.map (λ ⟨e,_⟩ => substitute_univ lvl e)) (body.substitute_univ lvl)
+  | abs ty body => abs (ty.map (substitute_univ lvl)) (body.substitute_univ lvl)
   | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
   | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
   | const s arr => const s $ arr.map (Level.substitute · lvl)
@@ -177,7 +177,7 @@ def add_trace (ty : String) (tr : String): TCEnv Unit := do
     if ty ∈ (← read).debug || "all" ∈ (← read).debug then dbg_trace tr
 
 def with_add_const (name : Name) (c : Declaration) (u : TCEnv α) : TCEnv α := do
-    add_trace "cmd" s!"adding const {name} to the env"
+    --add_trace "cmd" s!"adding const {name} to the env"
     if let some _ := (← read).const_ctx.find? name then
       throw $  .alreadyDefined name
     withReader 

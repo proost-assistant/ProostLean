@@ -7,13 +7,13 @@ import Proost.Util.Misc
 open Std
 namespace Term
 
-def shift (offset depth : Nat) : Term → Term
+partial def shift (offset depth : Nat) : Term → Term
   | var n => 
     let n := if n >= depth then n+offset else n
     var n
   | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
   | abs ty body =>
-    let ty   := ty.attach.map (λ ⟨e,_⟩ => e.shift offset depth)
+    let ty   := ty.map (shift offset depth)
     let body := body.shift offset depth.succ
     abs ty body
   | prod ty body =>
@@ -24,14 +24,14 @@ def shift (offset depth : Nat) : Term → Term
   | const s l => const s l
   | sort l => sort l
 
-def substitute (self sub : Term) (depth : Nat) : Term := match self with
+partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
       | .eq => sub.shift depth.pred 1
       | .gt => var (n-1)
       | .lt => var n
   | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
   | abs ty body => 
-    let ty := ty.attach.map (λ ⟨e,_⟩ => e.substitute sub depth)
+    let ty := ty.map (substitute · sub depth)
     let body := body.substitute sub depth.succ
     abs ty body 
   | prod ty body => 
