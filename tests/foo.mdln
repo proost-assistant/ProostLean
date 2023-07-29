@@ -1,0 +1,3 @@
+def foo.{u,v} := Sort v
+
+def bar.{u} : Sort (u+1) := foo.{0,u}

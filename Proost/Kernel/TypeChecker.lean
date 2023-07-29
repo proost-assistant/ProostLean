@@ -41,7 +41,7 @@ def Term.relevance :Term → TCEnv relevance
 
 --assumption : `lhs` and `rhs` are well-typed and of the same type
 partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
-  add_trace "conversion" s!"checking {lhs} = {rhs}"
+  --dbg_trace s!"checking \n{lhs} = {rhs}\n"
   let lhs := lhs.noAnn
   let rhs := rhs.noAnn
   if lhs == rhs then
@@ -49,22 +49,23 @@ partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
   let relevance ← lhs.relevance 
   if relevance == .irrelevant then
     return true
-  let lhs ←  lhs.whnf
-  let rhs ←  rhs.whnf
+  let lhs ← lhs.whnf
+  let rhs ← rhs.whnf
 
   if lhs == rhs then
     return true
-
+  --dbg_trace s!"matching \n{lhs} , {rhs}\n"
   match lhs,rhs with
-    | .sort l₁, .sort l₂ => pure $ l₁.is_eq l₂
-    | .var i, .var j => pure $ i == j
-    | .abs _ t₁, .abs _ t₂ => conversion t₁ t₂
-    | .prod t₁ u₁, .prod t₂ u₂
-    | .app t₁ u₁, .app t₂ u₂ => return (←conversion t₁ t₂) && (← conversion u₁ u₂)
+    | sort l₁, sort l₂ => return l₁.is_eq l₂
+    | var i, var j => return i == j
+    | abs _ t₁, abs _ t₂ => conversion t₁ t₂
+    | prod t₁ u₁, prod t₂ u₂
+    | app t₁ u₁, app t₂ u₂ => andM (conversion t₁ t₂) ( conversion u₁ u₂)
+    | const s₁ _, const s₂ _ => return s₁ == s₂ 
     | _,_ => pure false
 
 namespace Term
---@[export isDefEq]
+@[export isDefEq]
 def isDefEq (lhs rhs : Term) : TCEnv Unit :=
   unless ← conversion lhs rhs do
   throw $ .notDefEq lhs rhs
@@ -79,7 +80,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
 mutual
 --@[export infer]
 partial def infer (t : Term): TCEnv Term := do
-  add_trace "tc" s!"trying to infer the type of {t} in var_env {(← read).var_ctx}"
+  add_trace "tc" s!"trying to infer the type of \n{t}\n in var_env {(← read).var_ctx}\n"
   let res ← match t with
   | ann t ty => do
     check t ty
@@ -107,13 +108,13 @@ partial def infer (t : Term): TCEnv Term := do
       pure $ cls.substitute u 1
     else throw $ .notAFunction₂ (t,type_t) u
    | const s arr => get_type (s,arr)
-   add_trace "tc" s!"inferred {t} : {res}"
+   add_trace "tc" s!"inferred \n{t} \n: {res}\n"
    return res
 
 
 
 partial def check (t ty : Term):  TCEnv Unit := do
-  add_trace "tc" s!"checking {t} : {ty} in var_env {(← read).var_ctx}"
+  add_trace "tc" s!"checking \n{t}\n : {ty}\n in var_env {(← read).var_ctx}\n"
   match t,ty with
   | .abs none body, .prod a b => do
     with_add_var_to_context (some a) $

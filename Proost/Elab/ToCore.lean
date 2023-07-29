@@ -16,9 +16,8 @@ def RawLevel.toCore (l : RawLevel) : RawLevelEnv Level := do
   match l with
   | var s => 
     let index := (← read)
-    if let some n := index.find? s
-    then pure $ .var n
-    else throw $ .unboundLevelVar s
+    let some n := index.find? s | throw $ .unboundLevelVar s
+    return .var n
   | num n => pure $ OfNat.ofNat n
   | plus l n => pure $ .plus (← toCore l) n
   | max l₁ l₂ => pure $ .max (← toCore l₁) (← toCore l₂)
@@ -81,22 +80,22 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
 
 abbrev RawCommandEnv := Except RawError
 
-def map_univs : List String → EStateM RawError (HashMap String Nat) Unit
-    | [] => return
-    | h::t => do 
-      if let some _ := (← get).find? h then
-        throw $ .duplicateUniverseVar h
+def map_univs (arr : Array String) : Except RawError (HashMap String Nat) := do 
+    let mut map := HashMap.empty
+    for h in [0:arr.size] do
+      if let some _ := map.find? arr[h]! then
+        throw $ .duplicateUniverseVar arr[h]!
       else 
-        modify (λ hm => HashMap.insert hm h hm.size)
-        map_univs t
+        map := HashMap.insert map arr[h]! h
+    return map
 
 
 def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
   match t with
     | .def s l args ty t =>
-      let hm ← match map_univs l default with
-        | .ok () hm => pure hm
-        | .error e _ => throw e
+      let hm ← match map_univs l with
+        | .ok hm => pure hm
+        | .error e => throw e
       let (t,ty) := args.foldl
         (λ (t,ty) (idents,ity) => 
           idents.foldr 
@@ -111,9 +110,9 @@ def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
       return .def s hm.size ty t
 
     | .axiom s l ty =>       
-      let hm ← match map_univs l default with
-        | .ok () hm => pure hm
-        | .error e _ => throw e
+      let hm ← match map_univs l  with
+        | .ok hm => pure hm
+        | .error e => throw e
       let ty ← RawTerm.toCore ty ⟨hm,default⟩
       return .axiom s hm.size ty
 

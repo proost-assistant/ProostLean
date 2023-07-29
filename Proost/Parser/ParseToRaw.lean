@@ -8,6 +8,8 @@ open Lean Elab Meta Term
 partial def elabLevel (stx : TSyntax `proost_level) : Except String RawLevel := do
   match stx with
 
+  | `(proost_level| ($l)) => elabLevel l
+
   | `(proost_level| $n:num) => return .num n.getNat
   
   | `(proost_level| $x:ident) => return .var x.getId.toString
@@ -100,8 +102,8 @@ partial def elabCommand (stx : TSyntax `proost_command) : Except String RawComma
   match stx with
   | `(proost_command| def $s $[.{ $l:ident ,* }]? $[($args * : $args_ty)]* $[: $ty]? := $t) =>
       let l := Id.run do
-        let some l := l | []
-        l.getElems.map (·.getId.toString) |>.toList
+        let some l := l | #[]
+        l.getElems.map (·.getId.toString) 
       let mut res_args := []
       for i in [:args.size] do
         let ty ← elabProost args_ty[i]!
@@ -113,8 +115,8 @@ partial def elabCommand (stx : TSyntax `proost_command) : Except String RawComma
 
   | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) => 
       let l := Id.run do
-        let some l := l | []
-        l.getElems.map (·.getId.toString) |>.toList
+        let some l := l | #[]
+        l.getElems.map (·.getId.toString) 
       let ty ← elabProost ty
       return .axiom s.getId.toString l ty
 

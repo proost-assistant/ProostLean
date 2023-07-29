@@ -23,7 +23,7 @@ def succ : AxiomVal :=
 def nat_rec : AxiomVal :=
   { name := "Nat_rec"
     type := 
-        prod (prod nat_ (sort $ .var 1))
+        prod (prod nat_ (sort $ .var 0))
       $ prod (app (var 1) (const "zero" #[]))
       $ prod (prod nat_ (prod (app (var 3) (var 1)) (app (var 4) (app (const "succ" #[]) (var 2)))))
       $ prod nat_ 
@@ -44,9 +44,8 @@ partial def reduce_nat_rec (t: Term) : TCEnv (Option Term) := do
     | .const "zero" _ => pure arr[1]!
     | .app s k =>
         let .const "succ" _ ← whnf s | no
-        let p_succ := arr[2]! 
-        let new_rec_args := arr[0:arr.size-1]
-        let new_rec_args := new_rec_args.as.push k
+        let p_succ := arr[2]!
+        let new_rec_args := arr.modify 3 (λ _ => k)
         return some $ .app (.app p_succ k) (hd.mkAppN new_rec_args)
     | _ => no
 

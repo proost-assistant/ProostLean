@@ -209,11 +209,9 @@ def withadd_var_to_context_no_shift (t : Option Term) : TCEnv α →TCEnv α  :=
 class GetType (A: Type) where
   get_type : A → TCEnv Term
 
-
-
 def get_const_type (s : Name) (arr : Array Level): TCEnv Term := do
   let res := (← read).const_ctx.find? s
-  let some $ c := res | throw $ .unknownConstant s
+  let some c := res | throw $ .unknownConstant s
   if c.levelParamsNum != arr.size then
     throw $ .wrongNumberOfUniverse s c.levelParamsNum arr.size
   return c.type.substitute_univ arr --todo substitute univ
@@ -246,4 +244,4 @@ abbrev Commands := List Command
 
 @[extern "proost_whnf"] opaque whnf : Term → TCEnv Term
 --@[extern "infer"]  opaque infer : Term → TCEnv Term
---@[extern "isDefEq"]  opaque isDefEq : Term → Term → TCEnv Bool
+@[extern "isDefEq"] opaque isDefEq : Term → Term → TCEnv Unit

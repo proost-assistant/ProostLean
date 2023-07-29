@@ -5,6 +5,7 @@ syntax ident : proost_level
 syntax proost_level "+" num : proost_level
 syntax "max" proost_level (proost_level)+ : proost_level
 syntax "imax" proost_level (proost_level)+ : proost_level
+syntax "(" proost_level ")" : proost_level
 
 
 declare_syntax_cat proost_constant

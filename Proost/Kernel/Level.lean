@@ -79,7 +79,7 @@ def n_of_univ : Level → Nat
   | l + _ => l.n_of_univ
   | max l₁ l₂
   | imax l₁ l₂ => Max.max l₁.n_of_univ l₂.n_of_univ
-  | var k => k
+  | var k => k+1
 
 def substitute_single (l : Level) (n : Nat) (u : Level):  Level := match l with
   | 0 => 0
@@ -94,7 +94,7 @@ def substitute (l : Level) (univs : Array Level):  Level := match l with
   | max l₁ l₂ => l₁.substitute univs |>.max $ l₂.substitute univs
   | imax l₁ l₂ => l₁.substitute univs |>.imax $ l₂.substitute univs
   | var k => Id.run do
-    let some l := univs[k-1]? | panic! s!"unexpected level variable {k-1}, univ list is {univs}"
+    let some l := univs[k]? | panic! s!"unexpected level variable {k}, univ list is {univs}"
     l
 
 partial def geq_no_subst (lhs rhs : Level) (n : Int) : State := Id.run do

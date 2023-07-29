@@ -17,7 +17,7 @@ def type_check_file (file : String) (opts : CallOptions): IO Unit := do
     ctx
   if let .error e := eval_commands then
     throw $ IO.Error.userError $ ToString.toString e
-  --println! "success"
+  else println! s!"Successfully type-checked {file}."
 
 structure Main_call where
   files : List String
@@ -33,9 +33,8 @@ def get_options (input : String) : Main_call := Id.run do
   ⟨files,options⟩
 
 def main (args : List String) : IO Unit := do
-  let options := ⟨["all"]⟩
+  let options := ⟨["all","print"]⟩
   for file in  args  do
     --println! s!"checking {file}"
     type_check_file file options
 
---#eval type_check_file "tests/nat.mdln" ⟨["print","whnf"]⟩

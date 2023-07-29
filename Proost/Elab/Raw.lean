@@ -49,8 +49,8 @@ def RawTerm.toString : RawTerm → String
 instance : ToString RawTerm := ⟨RawTerm.toString⟩  
 
 inductive RawCommand : Type :=
-  | def : String → List String → List (Array String × RawTerm) → Option RawTerm → RawTerm → RawCommand
-  | axiom : String → List String → RawTerm → RawCommand
+  | def : String → Array String → List (Array String × RawTerm) → Option RawTerm → RawTerm → RawCommand
+  | axiom : String → Array String → RawTerm → RawCommand
   | check : RawTerm → RawCommand
   | eval : RawTerm → RawCommand
 deriving Repr

@@ -21,7 +21,7 @@ def false_ : AxiomVal :=
 def false_rec : AxiomVal :=
   { name := "False_rec"
     type := 
-        prod (sort $ .var 1)
+        prod (sort $ .var 0)
       $ prod (const "False" #[])
       $ var 2
   }

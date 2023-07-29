@@ -3,8 +3,10 @@ def is_zero := Nat_rec.{1} (fun n: Nat => Prop) True (fun n: Nat, p: Prop => Fal
 def add := fun x: Nat => Nat_rec.{1}
     (fun a : Nat => Nat) x (fun a n: Nat => succ n)
 
-def two := succ (succ zero)
-
 def hmm : Eq.{1} Prop (is_zero zero) True := refl.{1} Prop True
 
-eval add two two
+def two := succ (succ zero)
+
+def four := succ (succ (succ (succ zero)))
+
+def foo : Eq.{1} Nat (add two two) four := refl.{1} Nat four
