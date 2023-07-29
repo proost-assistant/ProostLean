@@ -40,7 +40,6 @@ partial def reduce_nat_rec (t: Term) : TCEnv (Option Term) := do
   let ⟨hd,arr⟩:= t.getAppFnArgs
   let hd@(.const "Nat_rec" _) ← whnf hd | no
   let some n := arr[3]? | no
-  dbg_trace arr.size
   match ← whnf n with
     | .const "zero" _ => pure arr[1]!
     | .app s k =>
