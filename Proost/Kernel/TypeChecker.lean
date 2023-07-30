@@ -79,7 +79,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
 
 mutual
 --@[export infer]
-partial def infer (t : Term): TCEnv Term := do
+def infer (t : Term): TCEnv Term := do
   add_trace "tc" s!"trying to infer the type of \n{t}\n in var_env {(← read).var_ctx}\n"
   let res ← match t with
   | ann t ty => do
@@ -113,7 +113,7 @@ partial def infer (t : Term): TCEnv Term := do
 
 
 
-partial def check (t ty : Term):  TCEnv Unit := do
+def check (t ty : Term):  TCEnv Unit := do
   add_trace "tc" s!"checking \n{t}\n : {ty}\n in var_env {(← read).var_ctx}\n"
   match t,ty with
   | .abs none body, .prod a b => do
