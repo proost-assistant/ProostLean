@@ -1,8 +1,10 @@
 soon-soon
 - test, a lot
+- profile, optimise
 
 Soon-ish:
-- add recursors' reduction in the reduction engine
+- add general recursors' reduction in the reduction engine
+- switch to locally nameless representation in the kernel
 - finally finish CCobs somewhere ?
 
 Long run :
