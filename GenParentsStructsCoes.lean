@@ -2,13 +2,15 @@ import Lean
 
 open Lean Meta Elab Term Command
 
-elab "numOfMinors" n:ident : term => do
-  let some (.recInfo r) ← getConst? n.getId | unreachable!
-  dbg_trace r.numMinors
+deriving instance Repr for RecursorRule
+
+elab "rules" n:ident : term => do
+  let some (.inductInfo r) ← getConst? n.getId | unreachable!
+  dbg_trace repr r.isRec
   throwAbortTerm
 
-elab "#numOfMinors" n:ident : command => do
-  let stx ← `(example : True := numOfMinors $n)
+elab "#rules" n:ident : command => do
+  let stx ← `(example : True := rules $n)
   elabCommand stx
 
-#numOfMinors Nat.rec
+#rules Eq

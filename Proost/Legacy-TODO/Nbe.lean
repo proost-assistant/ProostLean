@@ -131,6 +131,6 @@ def Term.whnf₂ (t : Term): TCEnv Term := do
 --    .app (.app And (.var 4)) (.var 3)
 --
 --  let And_decl : Decl := ⟨And_ty,0,And⟩
---  (with_add_decl "And" And_decl $
+--  (with_add_def "And" And_decl $
 --    (Term.app And (.var 4)) |>.whnf default)
 --

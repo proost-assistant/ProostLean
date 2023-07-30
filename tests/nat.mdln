@@ -1,12 +1,12 @@
-def isZero := Nat_rec.{1} (fun n: Nat => Prop) True (fun n: Nat, p: Prop => False)
+def iszero := Nat_rec.{1} (fun n: Nat => Prop) True (fun n: Nat, p: Prop => False)
 
 def add := fun x: Nat => Nat_rec.{1}
-    (fun a : Nat => Nat) x (fun a n: Nat => Succ n)
+    (fun a : Nat => Nat) x (fun a n: Nat => succ n)
 
-def hmm : Eq.{1} Prop (isZero Zero) True := refl.{1} Prop True
+def hmm : Eq.{1} Prop (iszero zero) True := refl.{1} Prop True
 
-def two := Succ (Succ Zero)
+def two := succ (succ zero)
 
-def four := Succ (Succ (Succ (Succ Zero)))
+def four := succ (succ (succ (succ zero)))
 
 def foo : Eq.{1} Nat (add two two) four := refl.{1} Nat four

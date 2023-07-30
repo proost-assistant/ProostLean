@@ -230,14 +230,17 @@ def with_add_const (name : Name) (c : Declaration) (u : TCEnv α) : TCEnv α := 
       )
       u
 
-def with_add_decl (d: DefinitionVal) : TCEnv α → TCEnv α := 
-    with_add_const d.name (.defnDecl d)
+def with_add_decl (d: Declaration) : TCEnv α → TCEnv α := 
+    with_add_const d.name d
+
+def with_add_def (d: DefinitionVal) : TCEnv α → TCEnv α := 
+    with_add_const d.name d
 
 def with_add_axiom (a : AxiomVal) : TCEnv α →  TCEnv α := 
-    with_add_const a.name (.axiomDecl a)
+    with_add_const a.name a
 
-def with_add_axioms (a : List AxiomVal) : TCEnv α → TCEnv α :=
-  a.foldl (fun u ax => with_add_axiom ax u)
+def with_add_axioms (a : List Declaration) : TCEnv α → TCEnv α :=
+  a.foldl (fun u ax => with_add_decl ax u)
 
 -- Overwrites the MonadExceptOf to print the errors
 -- TODO have better error management
@@ -253,6 +256,9 @@ def withadd_var_to_context_no_shift (t : Option Term) : TCEnv α →TCEnv α  :=
 class GetType (A: Type) where
   get_type : A → TCEnv Term
 
+def get_const_decl? (s : Name) : TCEnv (Option Declaration) := do
+  return (← read).const_ctx.find? s
+  
 def get_const_type (s : Name) (arr : Array Level): TCEnv Term := do
   let res := (← read).const_ctx.find? s
   let some c := res | throw $ .unknownConstant s
@@ -268,6 +274,14 @@ def get_var_type (n:Nat) : TCEnv Term := do
   let some ty := optty | throw $ .unTypedVariable n ctx
   pure ty
 instance : GetType $ Nat := ⟨get_var_type⟩
+
+@[inline] def matchConstAux {α} (e : Term) (failK : Unit → TCEnv α) (k : Declaration → Array Level → TCEnv α) : TCEnv α :=
+  match e with
+  | .const name lvls => do
+    let (some cinfo) ← get_const_decl? name | failK ()
+    k cinfo lvls
+  | _ => failK ()
+
 
 inductive Command : Type :=
   | def : Name → Nat → Option Term → Term → Command

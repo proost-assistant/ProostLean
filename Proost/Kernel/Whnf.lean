@@ -2,12 +2,12 @@ import Proost.Kernel.Level
 import Proost.Kernel.Core
 import Proost.Kernel.Term
 import Proost.Kernel.Axioms
+import Proost.Kernel.ReduceRec
 import Std.Data.HashMap
 import Proost.Util.Misc
 
 open Std
 namespace Term
-
 
 
 def with_add_var_to_context (t : Option Term) : TCEnv α → TCEnv α:= 
@@ -42,18 +42,25 @@ partial def whnf (t : Term) : TCEnv Term := do
     let (t₁,t₂) := hd₂.getAppFnArgs
     hd := t₁
     args := t₂.append args
+    let finish := λ () => dbg_trace "lolwut"; pure $ mkAppN hd args
     match hd with
       | abs _ body =>
         let mut t := body.substitute args[0]! 1
         for arg in args[1:] do
           t := app t arg
         Term.whnf t
-      | const s _ => 
-        let t := mkAppN hd args
-        let some t ← red_rec all_recs s $ t | pure t
-        t.whnf
-      | _ => 
-        let t := mkAppN hd args
-        pure t
+      | const _ _ => 
+        matchConstAux hd finish fun cinfo lvls =>
+          match cinfo with
+          | .recursorDecl rec => reduceRec rec lvls args finish Term.whnf
+          | .inductDecl eq => 
+            if eq.name = "Eq" then 
+            do
+              let t ← finish ()
+              let some t ← reduce_eq t | pure t
+              pure t
+            else finish ()
+          | _ => finish ()
+      | _ => finish ()
   else 
     pure t

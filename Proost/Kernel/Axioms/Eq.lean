@@ -11,16 +11,27 @@ def refl_ (l : Level) := const "Refl" #[l]
 @[match_pattern]
 def cast__ (l : Level) := const "cast" #[l]
 
-def eq : AxiomVal :=
+def eq : InductiveVal :=
   { name := "Eq"
     type := prod (sort $ .var 0) $ prod (var 1) $ prod (var 2) prop
+    all := ["Eq"]
+    numParams := 2
+    numIndices := 1
+    ctors := ["refl"]
+    isRec := false
+    isReflexive := false
+    isNested := false
   }
 
-def refl : AxiomVal := 
-  { name := "Refl"
+def refl : ConstructorVal := 
+  { name := "refl"
+    induct := "Eq"
     type := 
       -- (A : Sort u) -> (x : A) -> Eq.{u} A x x
       prod (sort $ .var 0) $ prod (var 1) $ const "Eq" #[.var 0] |>.app (var 2) |>.app (var 1) |>.app (var 1)
+    cidx := 1
+    numParams := 2
+    numFields := 1
   }
 
 def cast_ : AxiomVal :=
@@ -45,11 +56,11 @@ def transport : AxiomVal :=
       $ prod (var 2)
       $ prod (prod (var 3) prop)
       $ prod (app (var 1) (var 3))
-      $ prod (const "Eq" #[.succ $ .var 1] |>.app (var 4) |>.app (var 3)) 
+      $ prod (eq_ (.succ $ .var 1) |>.app (var 4) |>.app (var 3)) 
       $ (app (var 3) (var 4))
   }
 
-def eq_axioms : List AxiomVal :=
+def eq_axioms : List Declaration :=
   [eq,refl,cast_,transport]
 
 --def eq_rec : AxiomVal := 

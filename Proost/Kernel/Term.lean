@@ -16,6 +16,18 @@ inductive Term : Type :=
   | ann   : Term → Term → Term
 deriving Repr, Inhabited, BEq
 
+open Term
+
+def mkAppN : Term → Array Term → Term := fun hd arr =>
+  arr.foldl app hd
+
+partial def mkAppRangeAux (n : Nat) (args : Array Term) (i : Nat) (e : Term) : Term :=
+  if i < n then mkAppRangeAux n args (i+1) (app e (args.get! i)) else e
+
+/-- `mkAppRange f i j #[a_1, ..., a_i, ..., a_j, ... ]` ==> the expression `f a_i ... a_{j-1}` -/
+def mkAppRange (f : Term) (i j : Nat) (args : Array Term) : Term :=
+  mkAppRangeAux j args i f
+
 namespace Term
 
 def getAppFn : Term →  Term
@@ -31,16 +43,6 @@ def getAppFnArgs : Term →  Term × Array Term
     let ⟨f,args⟩ := f.getAppFnArgs
     ⟨f,args.push arg⟩
   | t => ⟨t,#[]⟩
-
-def mkAppN : Term → Array Term → Term := fun hd arr =>
-  arr.foldl app hd
-
-partial def mkAppRangeAux (n : Nat) (args : Array Term) (i : Nat) (e : Term) : Term :=
-  if i < n then mkAppRangeAux n args (i+1) (app e (args.get! i)) else e
-
-/-- `mkAppRange f i j #[a_1, ..., a_i, ..., a_j, ... ]` ==> the expression `f a_i ... a_{j-1}` -/
-def mkAppRange (f : Term) (i j : Nat) (args : Array Term) : Term :=
-  mkAppRangeAux j args i f
 
 def n_of_univ : Term → Nat 
   | .var _ => 0

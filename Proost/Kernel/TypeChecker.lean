@@ -183,7 +183,7 @@ end Term
 --    .app (.app And (.var 4)) (.var 3)
 --
 --  let And_decl : Decl := ⟨And_ty,0,And⟩
---  with_add_decl "And" And_decl $
+--  with_add_def "And" And_decl $
 --    Term.app (Term.app (.const "And" #[]) (.var 4)) (.var 3) |>.is_def_eq 
 --      (.prod .prop $ 
 --    .prod (.prod (.var 5) $ .prod (.var 5) $ .var 3) $

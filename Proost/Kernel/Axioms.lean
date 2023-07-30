@@ -4,7 +4,7 @@ import Proost.Kernel.Axioms.Nat
 import Std.Data.HashMap
 open Std
 
-def axioms : List AxiomVal :=
+def axioms : List Declaration :=
   [ eq_axioms,
     logic_axioms,
     nat_axioms
