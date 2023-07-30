@@ -2,22 +2,23 @@ import Proost
 open Lean
 
 def type_check_file (file : String) (opts : CallOptions): IO Unit := do
-  let code ← IO.FS.readFile ⟨file⟩ 
+  let code ← timeit "Reading file:" $ IO.FS.readFile ⟨file⟩ 
   initSearchPath (← Lean.findSysroot) ["build/lib"]
   let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
   --println! "parsing {file}"
-  let raw ← IO.ofExcept $ parse code env
+  let raw ← timeit "Parsing :" $ IO.ofExcept $ parse code env
   --println! "parsing succeeded !\n Commands produced:\n  {raw}"
   --println! "elaborating"
-  let core ← IO.ofExcept $ raw.toCore
+  let core ← timeit "Elaborating:" $  IO.ofExcept $ raw.toCore
   --println! "elaboration succeeded !\n Term produced:\n  {core}"
-  let ctx : TCContext := {debug := opts.1}
-  let eval_commands := 
-    (with_initialize_env_axioms <| evalCommands core)
-    ctx
-  if let .error e := eval_commands then
-    throw $ IO.Error.userError $ ToString.toString e
-  else println! s!"Successfully type-checked {file}."
+  timeit "Type-checking :" $ do
+    let ctx : TCContext := {debug := opts.1}
+    let eval_commands := 
+      (with_initialize_env_axioms <| evalCommands core)
+      ctx
+    if let .error e := eval_commands then
+      throw $ IO.Error.userError $ ToString.toString e
+    else println! s!"Successfully type-checked {file}."
 
 structure Main_call where
   files : List String

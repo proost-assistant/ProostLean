@@ -243,5 +243,9 @@ instance : ToString Command where
 abbrev Commands := List Command
 
 @[extern "proost_whnf"] opaque whnf : Term → TCEnv Term
---@[extern "infer"]  opaque infer : Term → TCEnv Term
+@[extern "infer"]  opaque infer : Term → TCEnv Term
+@[extern "conversion"] opaque conversion : Term → Term → TCEnv Bool
 @[extern "isDefEq"] opaque isDefEq : Term → Term → TCEnv Unit
+
+instance : CoeFun Term (λ _ => Term → Term) where
+  coe := Term.app

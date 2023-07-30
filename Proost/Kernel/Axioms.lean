@@ -11,7 +11,7 @@ def axioms : List AxiomVal :=
   ] |>.join
 
 partial def all_recs : HashMap String (Term → TCEnv (Option Term)) := 
-  HashMap.ofList [("Nat_rec",reduce_nat_rec)]
+  HashMap.ofList [("Nat_rec",reduce_nat_rec),("Eq",reduce_eq),("cast",reduce_cast)]
 
 def red_recs : List RedRec := []
 

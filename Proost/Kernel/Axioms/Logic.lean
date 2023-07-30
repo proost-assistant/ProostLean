@@ -2,21 +2,23 @@ import Proost.Kernel.Core
 
 open Term
 
-def true_ : AxiomVal :=
+def true_ := const "True" #[]
+def false_ := const "False" #[]
+
+def true : AxiomVal :=
   { name := "True"
     type := prop
   }
 
 def tt : AxiomVal :=
-  { name := "Tt"
+  { name := "tt"
     type := const "True" #[]
   }
 
-def false_ : AxiomVal :=
+def false : AxiomVal :=
   { name := "False"
     type := prop
   }
-
 
 def false_rec : AxiomVal :=
   { name := "False_rec"
@@ -27,4 +29,4 @@ def false_rec : AxiomVal :=
   }
 
 def logic_axioms : List AxiomVal :=
-  [true_,tt,false_,false_rec]
+  [true,tt,false,false_rec]

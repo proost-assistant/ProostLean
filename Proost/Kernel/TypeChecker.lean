@@ -1,5 +1,7 @@
 import Proost.Kernel.Level
 import Proost.Kernel.Term
+import Proost.Kernel.Whnf
+
 --import Proost.Kernel.Nbe
 import Proost.Util.Misc
 
@@ -40,6 +42,7 @@ def Term.relevance :Term → TCEnv relevance
 
 
 --assumption : `lhs` and `rhs` are well-typed and of the same type
+@[export conversion]
 partial def Term.conversion (lhs rhs : Term) : TCEnv Bool := do
   --dbg_trace s!"checking \n{lhs} = {rhs}\n"
   let lhs := lhs.noAnn
@@ -78,7 +81,7 @@ def imax (lhs rhs : Term) : TCEnv Term := do
     | _,_ => throw $ .notASort lhs
 
 mutual
---@[export infer]
+@[export infer]
 def infer (t : Term): TCEnv Term := do
   add_trace "tc" s!"trying to infer the type of \n{t}\n in var_env {(← read).var_ctx}\n"
   let res ← match t with
