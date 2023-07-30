@@ -1,77 +1,9 @@
 import Proost.Kernel.Level
 import Std.Data.HashMap
 import Proost.Util.Misc
+import Proost.Kernel.Term
 
 open Std
-
-abbrev Name := String
-
-inductive Term : Type :=
-  | var   : Nat → Term
-  | sort  : Level → Term
-  | app   : Term → Term → Term
-  | abs   : Option Term → Term → Term
-  | prod  : Term → Term → Term
-  | const : Name → Array Level →  Term
-  | ann   : Term → Term → Term
-deriving Repr, Inhabited, BEq
-
-namespace Term
-
-def getAppFn : Term →  Term
-  | .app f _ => f.getAppFn
-  | t => t
-
-def getAppArgs : Term → Array Term
-  | .app f arg => f.getAppArgs.push arg
-  | _ => #[]
-
-def getAppFnArgs : Term →  Term × Array Term
-  | .app f arg =>
-    let ⟨f,args⟩ := f.getAppFnArgs
-    ⟨f,args.push arg⟩
-  | t => ⟨t,#[]⟩
-
-def mkAppN : Term → Array Term → Term := fun hd arr =>
-  arr.foldl (λ f x => app f x) hd
-
-def n_of_univ : Term → Nat 
-  | .var _ => 0
-  | .abs t₁ t₂ => 
-    let t₁_univ := match t₁ with | some t => t.n_of_univ | none => 0
-    max t₁_univ t₂.n_of_univ
-  | .app t₁ t₂ 
-  | .ann t₁ t₂
-  | .prod t₁ t₂ => max t₁.n_of_univ t₂.n_of_univ
-  | .const _ arr => arr.foldl (fun acc l => max acc l.n_of_univ) 0
-  | .sort l => l.n_of_univ
-
-def prop : Term := .sort 0
-def type (l : Level) : Term := .sort l.succ
-
-def toString : Term → String
-    | .var i => s!"{i}"
-    | .sort l => s!"Sort {l}"
-    | .app t1 t2 => s!"({t1.toString}) ({t2.toString})"
-    | .abs (some t1) t2 => s!"λ {t1.toString} => {t2.toString}"
-    | .abs _ t2 => s!"λ _ => {t2.toString}"
-    | .prod t1 t2  => s!"Π ({t1.toString}). {t2.toString}"
-    | .const s #[] => s
-    | .const s arr => s ++ Array.toString₂ ".{" "," "}" arr
-    | .ann t ty => s!"({t.toString} : {ty.toString})"
-
-instance : ToString Term := ⟨Term.toString⟩
-
-partial def substitute_univ (lvl : Array Level) : Term → Term
-  | sort l => sort $ l.substitute lvl
-  | var n => var n
-  | app t₁ t₂ => app (t₁.substitute_univ lvl) (t₂.substitute_univ lvl)
-  | abs ty body => abs (ty.map (substitute_univ lvl)) (body.substitute_univ lvl)
-  | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
-  | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
-  | const s arr => const s $ arr.map (Level.substitute · lvl)
-
-end Term
 
 structure ConstantVal where
   name : Name
@@ -85,46 +17,156 @@ structure DefinitionVal extends ConstantVal where
   term : Term
 deriving Repr
 
+
+structure ConstructorVal extends ConstantVal where
+  /-- Inductive type this constructor is a member of -/
+  induct  : Name
+  /-- Constructor index (i.e., Position in the inductive declaration) -/
+  cidx    : Nat
+  /-- Number of parameters in inductive datatype. -/
+  numParams : Nat
+  /-- Number of fields (i.e., arity - nparams) -/
+  numFields : Nat
+  deriving Inhabited
+
+/-- The kernel compiles (mutual) inductive declarations (see `inductiveDecls`) into a set of
+    - `Declaration.inductDecl` (for each inductive datatype in the mutual Declaration),
+    - `Declaration.ctorDecl` (for each Constructor in the mutual Declaration),
+    - `Declaration.recDecl` (automatically generated recursors).
+
+    This data is used to implement iota-reduction efficiently and compile nested inductive
+    declarations.
+
+    A series of checks are performed by the kernel to check whether a `inductiveDecls`
+    is valid or not. -/
+structure InductiveVal extends ConstantVal where
+  /-- Number of parameters. A parameter is an argument to the defined type that is fixed over constructors.
+  An example of this is the `α : Type` argument in the vector constructors
+  `nil : Vector α 0` and `cons : α → Vector α n → Vector α (n+1)`.
+
+  The intuition is that the inductive type must exhibit _parametric polymorphism_ over the inductive
+  parameter, as opposed to _ad-hoc polymorphism_.
+  -/
+  numParams : Nat
+  /-- Number of indices. An index is an argument that varies over constructors.
+
+  An example of this is the `n : Nat` argument in the vector constructor `cons : α → Vector α n → Vector α (n+1)`.
+  -/
+  numIndices : Nat
+  /-- List of all (including this one) inductive datatypes in the mutual declaration containing this one -/
+  all : List Name
+  /-- List of the names of the constructors for this inductive datatype. -/
+  ctors : List Name
+  /-- `true` when recursive (that is, the inductive type appears as an argument in a constructor). -/
+  isRec : Bool
+  /-- An inductive type is called reflexive if it has at least one constructor that takes as an argument a function returning the
+  same type we are defining.
+  Consider the type:
+  ```
+  inductive WideTree where
+  | branch: (Nat -> WideTree) -> WideTree
+  | leaf: WideTree
+  ```
+  this is reflexive due to the presence of the `branch : (Nat -> WideTree) -> WideTree` constructor.
+
+  See also: 'Inductive Definitions in the system Coq Rules and Properties' by Christine Paulin-Mohring
+  Section 2.2, Definition 3
+  -/
+  isReflexive : Bool
+  /-- An inductive definition `T` is nested when there is a constructor with an argument `x : F T`,
+   where `F : Type → Type` is some suitably behaved (ie strictly positive) function (Eg `Array T`, `List T`, `T × T`, ...). -/
+  isNested : Bool
+  deriving Inhabited
+
+/-- Information for reducing a recursor -/
+structure RecursorRule where
+  /-- Reduction rule for this Constructor -/
+  ctor : Name
+  /-- Number of fields (i.e., without counting inductive datatype parameters) -/
+  nfields : Nat
+  /-- Right hand side of the reduction rule -/
+  rhs : Term
+  deriving Inhabited
+
+
+structure RecursorVal extends ConstantVal where
+  /-- List of all inductive datatypes in the mutual declaration that generated this recursor -/
+  all : List Name
+  /-- Number of parameters -/
+  numParams : Nat
+  /-- Number of indices -/
+  numIndices : Nat
+  /-- Number of motives -/
+  numMotives : Nat
+  /-- Number of minor premises -/
+  numMinors : Nat
+  /-- A reduction for each Constructor -/
+  rules : List RecursorRule
+  /-- It supports K-like reduction.
+  A recursor is said to support K-like reduction if one can assume it behaves
+  like `Eq` under axiom `K` --- that is, it has one constructor, the constructor has 0 arguments,
+  and it is an inductive predicate (ie, it lives in Prop).
+
+  Examples of inductives with K-like reduction is `Eq`, `Acc`, and `And.intro`.
+  Non-examples are `exists` (where the constructor has arguments) and
+    `Or.intro` (which has multiple constructors).
+  -/
+  k : Bool
+  deriving Inhabited
+
+namespace RecursorVal
+ 
+def getMajorIdx (v : RecursorVal) : Nat :=
+  v.numParams + v.numMotives + v.numMinors + v.numIndices
+
+def getFirstIndexIdx (v : RecursorVal) : Nat :=
+  v.numParams + v.numMotives + v.numMinors
+
+def getFirstMinorIdx (v : RecursorVal) : Nat :=
+  v.numParams + v.numMotives
+
+def getInduct (v : RecursorVal) : Name :=
+  v.all.head!
+
+end RecursorVal
+
+
 inductive Declaration where
   | axiomDecl       (val : AxiomVal)
   | defnDecl        (val : DefinitionVal)
-  --| inductDecl      (lparams : List Name) (nparams : Nat) (types : List InductiveType) (isUnsafe : Bool)
-deriving Inhabited, Repr
+  | ctorDecl        (val : ConstructorVal)
+  | inductDecl      (var : InductiveVal)
+  | recursorDecl    (val : RecursorVal)
+deriving Inhabited
 
-def Declaration.name : Declaration → Name
-  | axiomDecl a => a.name
-  | defnDecl d  => d.name
+namespace Declaration 
 
-def Declaration.type : Declaration → Term
-  | axiomDecl a => a.type
-  | defnDecl d  => d.type
+def toConstantVal : Declaration → ConstantVal
+  | axiomDecl    d => d
+  | defnDecl     {toConstantVal := d, ..} => d
+  | inductDecl   {toConstantVal := d, ..} => d
+  | ctorDecl     {toConstantVal := d, ..} => d
+  | recursorDecl {toConstantVal := d, ..} => d
 
-def Declaration.levelParamsNum : Declaration → Nat
-  | axiomDecl a => a.levelParamsNum
-  | defnDecl d  => d.levelParamsNum
+def name : Declaration → Name := 
+  ConstantVal.name ∘ Declaration.toConstantVal 
 
-/-
-structure AppClosure (Values : Type): Type where
-  term : Term
-  closure : List Values
-deriving BEq,Repr
+def type : Declaration → Term :=
+  ConstantVal.type ∘ Declaration.toConstantVal
 
-inductive Neutral : Type :=
-  | var : Nat → Neutral
-  | fvar : Nat → Neutral
-  | ax : Axiom → Array Level → Neutral
-deriving BEq, Repr
+def levelParamsNum : Declaration → Nat :=
+  ConstantVal.levelParamsNum ∘ Declaration.toConstantVal 
 
-inductive Value : Type :=
-  | neutral : Neutral → List Value → Value
-  | sort : Level → Value
-  | abs : Option Value → AppClosure Value → Value
-  | prod : Value → AppClosure Value → Value
-deriving Inhabited, BEq, Repr
+instance : Repr Declaration where
+  reprPrec d := Repr.reprPrec d.name
 
-instance : ToString Value := ⟨reprStr⟩
+instance : Coe AxiomVal Declaration := ⟨axiomDecl⟩ 
+instance : Coe DefinitionVal Declaration := ⟨defnDecl⟩ 
+instance : Coe InductiveVal Declaration := ⟨inductDecl⟩ 
+instance : Coe ConstructorVal Declaration := ⟨ctorDecl⟩ 
+instance : Coe RecursorVal Declaration := ⟨recursorDecl⟩ 
 
-def Value.var (n : Nat) : Value := .neutral (.var n) [] -/
+end Declaration
 
 abbrev ConstContext := HashMap Name Declaration
 abbrev VarContext := Array $ Option Term
@@ -197,6 +239,8 @@ def with_add_axiom (a : AxiomVal) : TCEnv α →  TCEnv α :=
 def with_add_axioms (a : List AxiomVal) : TCEnv α → TCEnv α :=
   a.foldl (fun u ax => with_add_axiom ax u)
 
+-- Overwrites the MonadExceptOf to print the errors
+-- TODO have better error management
 instance (priority := high) : MonadExceptOf TCError TCEnv where
   throw err := do
     dbg_trace s!"{err}"

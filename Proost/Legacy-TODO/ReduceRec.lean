@@ -1,58 +1,25 @@
 import Proost.Kernel.Core
 
-
---The following code is shamelessly stolen from Lean 4 repository, because I seriously don't feel like doing recursor reduction myself :)
-
-/-- Information for reducing a recursor -/
-structure RecursorRule where
-  /-- Reduction rule for this Constructor -/
-  ctor : Name
-  /-- Number of fields (i.e., without counting inductive datatype parameters) -/
-  nfields : Nat
-  /-- Right hand side of the reduction rule -/
-  rhs : Term
-  deriving Inhabited
+--The following code is shamelessly stolen from Lean 4 repository, 
+--because I seriously don't feel like doing recursor reduction myself :)
 
 
-structure RecursorVal extends ConstantVal where
-  /-- List of all inductive datatypes in the mutual declaration that generated this recursor -/
-  all : List Name
-  /-- Number of parameters -/
-  numParams : Nat
-  /-- Number of indices -/
-  numIndices : Nat
-  /-- Number of motives -/
-  numMotives : Nat
-  /-- Number of minor premises -/
-  numMinors : Nat
-  /-- A reduction for each Constructor -/
-  rules : List RecursorRule
-  /-- It supports K-like reduction.
-  A recursor is said to support K-like reduction if one can assume it behaves
-  like `Eq` under axiom `K` --- that is, it has one constructor, the constructor has 0 arguments,
-  and it is an inductive predicate (ie, it lives in Prop).
+private def getRecRuleFor (recVal : RecursorVal) (major : Term) : Option RecursorRule :=
+  match major.getAppFn with
+  | .const fn _ => recVal.rules.find? fun r => r.ctor == fn
+  | _               => none
 
-  Examples of inductives with K-like reduction is `Eq`, `Acc`, and `And.intro`.
-  Non-examples are `exists` (where the constructor has arguments) and
-    `Or.intro` (which has multiple constructors).
-  -/
-  k : Bool
-  isUnsafe : Bool
-  deriving Inhabited
-
-def RecursorVal.getMajorIdx (v : RecursorVal) : Nat :=
-  v.numParams + v.numMotives + v.numMinors + v.numIndices
 
 private def toCtorWhenK (recVal : RecursorVal) (major : Term) : TCEnv Term := do
-  let majorType ← inferType major
+  let majorType ← infer major
   let majorType ←  whnf majorType
   let majorTypeI := majorType.getAppFn
   if !majorTypeI.isConstOf recVal.getInduct then
     return major
   else do
     let (some newCtorApp) ← mkNullaryCtor majorType recVal.numParams | pure major
-    let newType ← inferType newCtorApp
-    if ← isDefEq majorType newType then
+    let newType ← infer newCtorApp
+    if ← conversion majorType newType then
       return newCtorApp
     else
       return major
@@ -74,7 +41,7 @@ private def reduceRec (recVal : RecursorVal) (recLvls : List Level) (recArgs : A
     match getRecRuleFor recVal major with
     | some rule =>
       let majorArgs := major.getAppArgs
-      if recLvls.length != recVal.levelParams.length then
+      if recLvls.length != recVal.levelParamsNum then
         failK ()
       else
         let rhs := rule.rhs.instantiateLevelParams recVal.levelParams recLvls

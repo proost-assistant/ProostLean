@@ -2,6 +2,29 @@ import Proost.Kernel.Core
 import Proost.Kernel.Term
 import Proost.Kernel.Axioms
 
+/-
+structure AppClosure (Values : Type): Type where
+  term : Term
+  closure : List Values
+deriving BEq,Repr
+
+inductive Neutral : Type :=
+  | var : Nat → Neutral
+  | fvar : Nat → Neutral
+  | ax : Axiom → Array Level → Neutral
+deriving BEq, Repr
+
+inductive Value : Type :=
+  | neutral : Neutral → List Value → Value
+  | sort : Level → Value
+  | abs : Option Value → AppClosure Value → Value
+  | prod : Value → AppClosure Value → Value
+deriving Inhabited, BEq, Repr
+
+instance : ToString Value := ⟨reprStr⟩
+
+def Value.var (n : Nat) : Value := .neutral (.var n) [] -/
+
 
 def Int.toNat' : Int → Option Nat
   | ofNat n   => some n
