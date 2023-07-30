@@ -41,9 +41,9 @@ partial def reduce_nat_rec (t: Term) : TCEnv (Option Term) := do
   let hd@(.const "Nat_rec" _) ← whnf hd | no
   let some n := arr[3]? | no
   match ← whnf n with
-    | .const "zero" _ => pure arr[1]!
+    | .const "Zero" _ => pure arr[1]!
     | .app s k =>
-        let .const "succ" _ ← whnf s | no
+        let .const "Succ" _ ← whnf s | no
         let p_succ := arr[2]!
         let new_rec_args := arr.modify 3 (λ _ => k)
         return some $ .app (.app p_succ k) (hd.mkAppN new_rec_args)

@@ -8,7 +8,7 @@ def true_ : AxiomVal :=
   }
 
 def tt : AxiomVal :=
-  { name := "tt"
+  { name := "Tt"
     type := const "True" #[]
   }
 

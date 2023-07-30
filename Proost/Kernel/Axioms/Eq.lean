@@ -8,7 +8,7 @@ def eq : AxiomVal :=
   }
 
 def refl : AxiomVal := 
-  { name := "refl"
+  { name := "Refl"
     type := 
       -- (A : Sort u) -> (x : A) -> Eq.{u} A x x
       prod (sort $ .var 0) $ prod (var 1) $ const "Eq" #[.var 0] |>.app (var 2) |>.app (var 1) |>.app (var 1)
@@ -58,7 +58,7 @@ def eq_rec : AxiomVal :=
           $  sort_v
          )
     $  prod (
-          mkAppN (var 1) #[var 2, mkAppN (const "refl" #[.var 1]) #[var 3, var 2, var 2]]
+          mkAppN (var 1) #[var 2, mkAppN (const "Refl" #[.var 1]) #[var 3, var 2, var 2]]
          )
       $ prod (var 4)
       $ prod (mkAppN (const "Eq" #[.var 1]) #[var 5, var 4, var 1])
