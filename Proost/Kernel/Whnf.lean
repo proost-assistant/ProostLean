@@ -9,7 +9,6 @@ import Proost.Util.Misc
 open Std
 namespace Term
 
-
 def with_add_var_to_context (t : Option Term) : TCEnv α → TCEnv α:= 
     withReader λ con => {con with var_ctx := con.var_ctx|>.push t |>.map (.map $ Term.shift 1 0) }
 
@@ -25,13 +24,6 @@ def reduce_decl : Term → TCEnv Term
     else
       return t
   | t => pure t
-
-def RedRecs := HashMap String (Term → TCEnv (Option Term))
-
-def red_rec (m : RedRecs) (s : String) (t : Term): TCEnv (Option Term) := do
-  dbg_trace s!"calling the reduction of {s} in \n{t}\n"
-  let some rec := m.find? s | dbg_trace s!"{s} is not a recursor\n";pure none
-  rec t
 
 @[export proost_whnf]
 partial def whnf (t : Term) : TCEnv Term := do 
