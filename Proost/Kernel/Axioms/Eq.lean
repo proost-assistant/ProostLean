@@ -157,7 +157,6 @@ def reduce_eq (t: Term) : TCEnv (Option Term) := do
   let (eq_ l) ← whnf hd    | no
   let some type := arr[0]? | no
   let some t₁   := arr[1]? | no
-  dbg_trace s!"t₁ := {t₁}"
   let some t₂   := arr[2]? | no
   --equality over Prop terms always reduces to True
   if l.is_eq 0 then 
@@ -232,3 +231,12 @@ def reduce_cast (t: Term) : TCEnv (Option Term) := do
 --  catch e => throw e
 --
 --
+
+def reduceEqCast (n : Name) (t : Term) : TCEnv Term := do
+    if n = "Eq" then 
+      let some t ← reduce_eq t | pure t
+      pure t
+    else if n = "cast" then
+      let some t ← reduce_cast t | pure t
+      pure t
+    else pure t

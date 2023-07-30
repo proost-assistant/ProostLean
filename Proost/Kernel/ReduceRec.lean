@@ -22,7 +22,6 @@ private def getRecRuleFor (recVal : RecursorVal) (major : Term) : Option Recurso
   | .const fn _ => recVal.rules.find? fun r => r.ctor == fn
   | _               => none
 
-
 private def toCtorWhenK (recVal : RecursorVal) (major : Term) : TCEnv Term := do
   let majorType ← infer major
   let majorType ←  whnf majorType
@@ -37,13 +36,8 @@ private def toCtorWhenK (recVal : RecursorVal) (major : Term) : TCEnv Term := do
     else
       return major
 
--- Helper predicate that returns `true` for inductive predicates used to define functions by well-founded recursion.
-private def isWFRec (declName : Name) : Bool :=
-  declName == "Acc_rec" || declName == "WellFounded_rec"
-
 /-- Auxiliary function for reducing recursor applications. -/
 def reduceRec (recVal : RecursorVal) (recLvls : Array Level) (recArgs : Array Term) (failK : Unit → TCEnv α) (successK : Term → TCEnv α) : TCEnv α :=
-  dbg_trace s!"trying to reduce {recVal.name} {recArgs}"
   let majorIdx := recVal.getMajorIdx
   if h : majorIdx < recArgs.size then do
     let major := recArgs.get ⟨majorIdx, h⟩
@@ -55,7 +49,7 @@ def reduceRec (recVal : RecursorVal) (recLvls : Array Level) (recArgs : Array Te
     | some rule =>
       let majorArgs := major.getAppArgs
       if recLvls.size != recVal.levelParamsNum then
-        dbg_trace s!"different number of universes (this shouldn't happend)"; failK ()
+        failK ()
       else
         let rhs := rule.rhs.substitute_univ recLvls
         -- Apply parameters, motives and minor premises from recursor application.
@@ -66,8 +60,7 @@ def reduceRec (recVal : RecursorVal) (recLvls : Array Level) (recArgs : Array Te
         let nparams := majorArgs.size - rule.nfields
         let rhs := mkAppRange rhs nparams majorArgs.size majorArgs
         let rhs := mkAppRange rhs (majorIdx + 1) recArgs.size recArgs
-        dbg_trace s!"success ;D {rhs}"
         successK rhs
-    | none => dbg_trace s!"no rule for {major}" ;failK ()
+    | none => failK ()
   else
     failK ()

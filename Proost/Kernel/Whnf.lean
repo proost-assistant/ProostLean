@@ -42,7 +42,7 @@ partial def whnf (t : Term) : TCEnv Term := do
     let (t₁,t₂) := hd₂.getAppFnArgs
     hd := t₁
     args := t₂.append args
-    let finish := λ () => dbg_trace "lolwut"; pure $ mkAppN hd args
+    let finish := λ () => pure $ mkAppN hd args
     match hd with
       | abs _ body =>
         let mut t := body.substitute args[0]! 1
@@ -53,13 +53,7 @@ partial def whnf (t : Term) : TCEnv Term := do
         matchConstAux hd finish fun cinfo lvls =>
           match cinfo with
           | .recursorDecl rec => reduceRec rec lvls args finish Term.whnf
-          | .inductDecl eq => 
-            if eq.name = "Eq" then 
-            do
-              let t ← finish ()
-              let some t ← reduce_eq t | pure t
-              pure t
-            else finish ()
+          | .inductDecl i => reduceEqCast i.name t 
           | _ => finish ()
       | _ => finish ()
   else 
