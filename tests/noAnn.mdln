@@ -1,0 +1,1 @@
+def foo : Nat -> Nat := fun n => n

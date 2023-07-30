@@ -10,8 +10,7 @@ def axioms : List AxiomVal :=
     nat_axioms
   ] |>.join
 
-
-partial def all_recs : Unit →  HashMap String (Term → TCEnv (Option Term)) := λ () =>
+partial def all_recs : HashMap String (Term → TCEnv (Option Term)) := 
   HashMap.ofList [("Nat_rec",reduce_nat_rec)]
 
 def red_recs : List RedRec := []

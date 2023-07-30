@@ -10,12 +10,12 @@ def nat : AxiomVal :=
 def nat_ : Term := const "Nat" #[]
 
 def zero : AxiomVal :=
-  { name := "zero"
+  { name := "Zero"
     type := nat_
   }
 
 def succ : AxiomVal :=
-  { name := "succ"
+  { name := "Succ"
     type := prod nat_ nat_
   }
         -- ∀ _, 1 zero → (∀ _, 3 1 → 3 (succ 2)) → ∀ _, 4 1
@@ -25,7 +25,7 @@ def nat_rec : AxiomVal :=
     type := 
         prod (prod nat_ (sort $ .var 0))
       $ prod (app (var 1) (const "zero" #[]))
-      $ prod (prod nat_ (prod (app (var 3) (var 1)) (app (var 4) (app (const "succ" #[]) (var 2)))))
+      $ prod (prod nat_ (prod (app (var 3) (var 1)) (app (var 4) (app (const "Succ" #[]) (var 2)))))
       $ prod nat_ 
       $ app (var 4) (var 1)
   }

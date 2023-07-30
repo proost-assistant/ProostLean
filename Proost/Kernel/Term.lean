@@ -67,28 +67,25 @@ def red_rec (m : RedRecs) (s : String) (t : Term): TCEnv (Option Term) := do
 
 @[export proost_whnf]
 partial def whnf (t : Term) : TCEnv Term := do 
-  let res ← do
-    let t ← reduce_decl t
-    let mut ⟨hd,args⟩ := t.getAppFnArgs
-    if !args.isEmpty then
-      let hd₂ ← hd.whnf
-      let (t₁,t₂) := hd₂.getAppFnArgs
-      hd := t₁
-      args := t₂.append args
-      match hd with
-        | abs _ body =>
-          let mut t := body.substitute args[0]! 1
-          for arg in args[1:] do
-            t := app t arg
-          Term.whnf t
-        | const s _ => 
-          let t := mkAppN hd args
-          let some t ← red_rec (all_recs ()) s $ t | pure t
-          t.whnf
-        | _ => 
-          let t := mkAppN hd args
-          pure t
-    else 
-      pure t
-  --dbg_trace s!"{t} \nreduces to \n{res}\n"
-  pure res
+  let t ← reduce_decl t
+  let mut ⟨hd,args⟩ := t.getAppFnArgs
+  if !args.isEmpty then
+    let hd₂ ← hd.whnf
+    let (t₁,t₂) := hd₂.getAppFnArgs
+    hd := t₁
+    args := t₂.append args
+    match hd with
+      | abs _ body =>
+        let mut t := body.substitute args[0]! 1
+        for arg in args[1:] do
+          t := app t arg
+        Term.whnf t
+      | const s _ => 
+        let t := mkAppN hd args
+        let some t ← red_rec all_recs s $ t | pure t
+        t.whnf
+      | _ => 
+        let t := mkAppN hd args
+        pure t
+  else 
+    pure t
