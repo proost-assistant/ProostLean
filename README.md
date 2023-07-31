@@ -1,6 +1,6 @@
 # Proost
 
-An reimplementation of the Proost proof-assistant written in Lean 4
+A reimplementation of the Proost proof-assistant written in Lean 4
 
 The goal of this project is mainly to both get more familiar with writing functional code in Lean, as well as allowing me to experiment on features that could then be implemented in Proost.
 
