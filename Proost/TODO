@@ -3,11 +3,11 @@ soon-soon
 - profile, optimise
 
 Soon-ish:
-- add general recursors' reduction in the reduction engine
 - switch to locally nameless representation in the kernel
 - finally finish CCobs somewhere ?
+- general inductive types construction
+
 
 Long run :
 - pattern-matching + exhaustiveness-check + termination-check
 - elaboration 
-- general inductive types framework

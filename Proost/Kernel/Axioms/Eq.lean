@@ -11,9 +11,11 @@ def refl_ (l : Level) := const "Refl" #[l]
 @[match_pattern]
 def cast__ (l : Level) := const "cast" #[l]
 
+def sort_u := sort $ .var 0
+
 def eq : InductiveVal :=
   { name := "Eq"
-    type := prod (sort $ .var 0) $ prod (var 1) $ prod (var 2) prop
+    type := prod sort_u $ prod (var 1) $ prod (var 2) prop
     all := ["Eq"]
     numParams := 2
     numIndices := 1
@@ -28,7 +30,7 @@ def refl : ConstructorVal :=
     induct := "Eq"
     type := 
       -- (A : Sort u) -> (x : A) -> Eq.{u} A x x
-      prod (sort $ .var 0) $ prod (var 1) $ const "Eq" #[.var 0] |>.app (var 2) |>.app (var 1) |>.app (var 1)
+      prod sort_u $ prod (var 1) $ const "Eq" #[.var 0] (var 2) (var 1) (var 1)
     cidx := 1
     numParams := 2
     numFields := 1
@@ -39,9 +41,9 @@ def cast_ : AxiomVal :=
     name := "cast"
     type := 
       -- (A B : Sort u) -> Eq.{u+1} (Sort u) A B -> A -> B
-        prod (sort $ .var 1) 
-      $ prod (sort $ .var 1) 
-      $ prod (const "Eq" #[.succ $ .var 1] |>.app (.sort (.var 1)) |>.app (var 2) |>.app (var 1)) 
+        prod sort_u 
+      $ prod sort_u 
+      $ prod (const "Eq" #[.succ $ .var 0] (.sort (.var 0)) (var 2) (var 1)) 
       $ prod (var 3) 
       $ var 3
   }
@@ -50,14 +52,14 @@ def transport : AxiomVal :=
   {
     name := "transp"
     type :=
-      -- (A : Type u) -> (t t' : A) -> (B : A -> Prop) -> B t -> Eq.{u+1} t t' -> B t'
-        prod (type $ .var 1)
+      -- (A : Type u) -> (t : A) -> (B : A -> Prop) -> B t -> (t' : A) → Eq.{u+1} A t t' -> B t'
+        prod (type $ .var 0)
       $ prod (var 1)
-      $ prod (var 2)
-      $ prod (prod (var 3) prop)
-      $ prod (app (var 1) (var 3))
-      $ prod (eq_ (.succ $ .var 1) |>.app (var 4) |>.app (var 3)) 
-      $ (app (var 3) (var 4))
+      $ prod (prod (var 2) prop)
+      $ prod ((var 1) (var 3))
+      $ prod (var 4)
+      $ prod (eq_ (.succ $ .succ $ .var 0) (var 5) (var 4) (var 1)) 
+      $ (var 4) (var 2)
   }
 
 def eq_axioms : List Declaration :=

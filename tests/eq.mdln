@@ -1,4 +1,5 @@
-def transport_type.{u, v} := (A: Sort u) -> (P: A -> Sort v) -> (x y: A) -> Eq.{u} A x y -> P x -> P y
+def ap.{u,v} (A : Type u) (B : Sort v) (f : A -> B ) (x y : A) (e : Eq.{u} A x y): Eq.{v} B (f x) (f y) :=
+    transp.{u} A x (fun t => Eq.{v} B (f x) (f t)) (refl.{v} B (f x)) y e
 
 def transport.{u,v} (A:Sort u) (P:A -> Sort v) (x y:A) (p: Eq.{u} A x y) (h: P x) : P y := 
     Eq_rec.{u,v} A x (fun y:A,p:Eq.{u} A x y => P y) h y p
@@ -13,3 +14,4 @@ def symm.{u} (A: Sort u) (x y: A) (e: Eq.{u} A x y): Eq.{u} A y x :=
 
 def trans.{u} (A: Sort u) (x y z: A) (e1 : Eq.{u} A x y) (e2: Eq.{u} A y z): Eq.{u} A x z := 
     Eq_rec.{u, 0} A y (fun x:A, e:Eq.{u} A y x => Eq.{u} A x z) e2 x (symm.{u} A x y e1)
+
