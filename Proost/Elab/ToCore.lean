@@ -5,10 +5,12 @@ import Proost.Kernel.Command
 import Proost.Util.AppSep
 import Proost.Util.Queue
 import Proost.Util.Misc
+import Proost.Util.Attach
 
 import Std.Data.HashMap
 
 open Std (HashMap)
+open PMap
 
 abbrev RawLevelEnv := ReaderT (HashMap String Nat) (Except RawError)
 
@@ -34,7 +36,7 @@ instance :  MonadLiftT RawLevelEnv RawTermEnv where
   monadLift {α} (a : RawLevelEnv α) := do
     fun h => liftExcept (a h.univs)
 
-partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
+def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
   --dbg_trace "elaborating :\n  {repr t} \nin env: \n  {repr (← get)}"
   match t with
     | prop | sort none => 
@@ -58,7 +60,7 @@ partial def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
         ty.toCore
       return .prod t ty
     | lam x ty t =>
-      let ty ← ty.mapM RawTerm.toCore
+      let ty ← attach ty |>.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
       let t ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
         t.toCore

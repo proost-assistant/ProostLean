@@ -1,6 +1,7 @@
 import Proost.Kernel.Level
 import Std.Data.HashMap
 import Proost.Util.Misc
+import Proost.Util.Attach
 
 open Std
 
@@ -71,22 +72,22 @@ def toString : Term → String
 
 instance : ToString Term := ⟨Term.toString⟩
 
-partial def substitute_univ (lvl : Array Level) : Term → Term
+def substitute_univ (lvl : Array Level) : Term → Term
   | sort l => sort $ l.substitute lvl
   | var n => var n
   | app t₁ t₂ => app (t₁.substitute_univ lvl) (t₂.substitute_univ lvl)
-  | abs ty body => abs (ty.map (substitute_univ lvl)) (body.substitute_univ lvl)
+  | abs ty body => abs (ty.attach |>.map (λ ⟨e,_⟩ => substitute_univ lvl e)) (body.substitute_univ lvl)
   | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
   | ann t ty => ann (t.substitute_univ lvl) (ty.substitute_univ lvl) 
   | const s arr => const s $ arr.map (Level.substitute · lvl)
 
-partial def shift (offset depth : Nat) : Term → Term
+def shift (offset depth : Nat) : Term → Term
   | var n => 
     let n := if n >= depth then n+offset else n
     var n
   | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
   | abs ty body =>
-    let ty   := ty.map (shift offset depth)
+    let ty   := ty.attach.map (λ ⟨e,_⟩ => shift offset depth e)
     let body := body.shift offset depth.succ
     abs ty body
   | prod ty body =>
@@ -97,14 +98,14 @@ partial def shift (offset depth : Nat) : Term → Term
   | const s l => const s l
   | sort l => sort l
 
-partial def substitute (self sub : Term) (depth : Nat) : Term := match self with
+def substitute (self sub : Term) (depth : Nat) : Term := match self with
   | var n => match compare n depth with
       | .eq => sub.shift depth.pred 1
       | .gt => var (n-1)
       | .lt => var n
   | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
   | abs ty body => 
-    let ty := ty.map (substitute · sub depth)
+    let ty := ty.attach.map (λ ⟨e,_⟩ => substitute e sub depth)
     let body := body.substitute sub depth.succ
     abs ty body 
   | prod ty body => 
