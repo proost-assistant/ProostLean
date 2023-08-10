@@ -18,7 +18,9 @@ lean_exe debug where
   supportInterpreter := true
   moreLeanArgs := #[
     "-DautoImplicit=false"]
-  moreLeancArgs := #["-pg"]
+  moreLeancArgs := #["-pg","-O0","-g"]
 
 
-require std from git "https://github.com/leanprover/std4" @ "dff883c55395438ae2a5c65ad5ddba084b600feb"
+require Std from git "https://github.com/leanprover/std4" @ "17c3833ab170ce20fd065ae3fb550300b3d85f23"
+
+require Cli from git "https://github.com/mhuisi/lean4-cli" @ "nightly"

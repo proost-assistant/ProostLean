@@ -5,6 +5,8 @@ import Proost.Kernel.Whnf
 --import Proost.Kernel.Nbe
 import Proost.Util.Misc
 
+open TCKind
+
 set_option autoImplicit false
 open GetType
 
@@ -71,14 +73,14 @@ namespace Term
 @[export isDefEq]
 def isDefEq (lhs rhs : Term) : TCEnv Unit :=
   unless ← conversion lhs rhs do
-  throw $ .notDefEq lhs rhs
+  throw ↑(notDefEq lhs rhs)
 
 
 def imax (lhs rhs : Term) : TCEnv Term := do
   match lhs,rhs with
     | sort l₁, sort l₂ => return sort $ l₁.imax l₂ |>.normalize 
-    | sort _,_ => throw $ .notASort rhs
-    | _,_ => throw $ .notASort lhs
+    | sort _,_ => throw ↑(notASort rhs)
+    | _,_ => throw ↑(notASort lhs)
 
 mutual
 @[export infer]
@@ -95,13 +97,13 @@ def infer (t : Term): TCEnv Term := do
     with_add_var_to_context (some t) $ do
       let univ_u ← (← u.infer).whnf
       univ_t.imax univ_u
-  | t@(abs none _) => throw $ .cannotInfer t
+  | t@(abs none _) => throw ↑(cannotInfer t)
   | abs (some t) u => do
     let univ_t ← t.infer
     if let sort _ := univ_t then
       with_add_var_to_context (some t) $ do
       return t.prod $ ← u.infer
-    else throw $ .notASort univ_t
+    else throw ↑(notASort univ_t)
 
   | app t u => do
     let type_t ← (← t.infer).whnf
@@ -109,7 +111,7 @@ def infer (t : Term): TCEnv Term := do
     if let prod arg_type cls := type_t then
       check u arg_type
       pure $ cls.substitute u 1
-    else throw $ .notAFunction₂ (t,type_t) u
+    else throw ↑(notAFunction₂ (t,type_t) u)
    | const s arr => get_type (s,arr)
    add_trace "tc" s!"inferred \n{t} \n: {res}\n"
    return res
@@ -128,7 +130,7 @@ def check (t ty : Term):  TCEnv Unit := do
     check body b
   | .app t u, ty => do
     let type_t ← infer t
-    let .prod a b := type_t | throw $ .notAFunction₂ (t,type_t) u
+    let .prod a b := type_t | throw ↑(notAFunction₂ (t,type_t) u)
     check u a
     let b := b.substitute u 1
     isDefEq b ty
@@ -138,7 +140,7 @@ def check (t ty : Term):  TCEnv Unit := do
     isDefEq ty tty
   | .sort l₁, .sort l₂ =>
     unless l₁+1 == l₂ do
-      throw $ .notDefEq (.sort (l₁+1)) (.sort l₂)
+      throw ↑(notDefEq (.sort (l₁+1)) (.sort l₂))
   | .var n, ty => do
     isDefEq ty $ ← get_type n
   | t,ty => do
@@ -147,7 +149,7 @@ def check (t ty : Term):  TCEnv Unit := do
 end
 
 def is_sort (t :Term): TCEnv Unit := do
-  let .sort _ := t | throw $ .notASort t
+  let .sort _ := t | throw ↑(notASort t)
   return
 
 def is_type (t : Term): TCEnv Unit := do

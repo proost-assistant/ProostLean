@@ -2,6 +2,7 @@ import Proost.Kernel.Level
 import Std.Data.HashMap
 import Proost.Util.Misc
 import Proost.Kernel.Term
+import Proost.Kernel.Error
 
 open Std
 
@@ -29,16 +30,7 @@ structure ConstructorVal extends ConstantVal where
   numFields : Nat
   deriving Inhabited
 
-/-- The kernel compiles (mutual) inductive declarations (see `inductiveDecls`) into a set of
-    - `Declaration.inductDecl` (for each inductive datatype in the mutual Declaration),
-    - `Declaration.ctorDecl` (for each Constructor in the mutual Declaration),
-    - `Declaration.recDecl` (automatically generated recursors).
 
-    This data is used to implement iota-reduction efficiently and compile nested inductive
-    declarations.
-
-    A series of checks are performed by the kernel to check whether a `inductiveDecls`
-    is valid or not. -/
 structure InductiveVal extends ConstantVal where
   /-- Number of parameters. A parameter is an argument to the defined type that is fixed over constructors.
   An example of this is the `α : Type` argument in the vector constructors
@@ -60,18 +52,7 @@ structure InductiveVal extends ConstantVal where
   /-- `true` when recursive (that is, the inductive type appears as an argument in a constructor). -/
   isRec : Bool
   /-- An inductive type is called reflexive if it has at least one constructor that takes as an argument a function returning the
-  same type we are defining.
-  Consider the type:
-  ```
-  inductive WideTree where
-  | branch: (Nat -> WideTree) -> WideTree
-  | leaf: WideTree
-  ```
-  this is reflexive due to the presence of the `branch : (Nat -> WideTree) -> WideTree` constructor.
-
-  See also: 'Inductive Definitions in the system Coq Rules and Properties' by Christine Paulin-Mohring
-  Section 2.2, Definition 3
-  -/
+  same type we are defining.-/
   isReflexive : Bool
   /-- An inductive definition `T` is nested when there is a constructor with an argument `x : F T`,
    where `F : Type → Type` is some suitably behaved (ie strictly positive) function (Eg `Array T`, `List T`, `T × T`, ...). -/
@@ -102,15 +83,7 @@ structure RecursorVal extends ConstantVal where
   numMinors : Nat
   /-- A reduction for each Constructor -/
   rules : List RecursorRule
-  /-- It supports K-like reduction.
-  A recursor is said to support K-like reduction if one can assume it behaves
-  like `Eq` under axiom `K` --- that is, it has one constructor, the constructor has 0 arguments,
-  and it is an inductive predicate (ie, it lives in Prop).
-
-  Examples of inductives with K-like reduction is `Eq`, `Acc`, and `And.intro`.
-  Non-examples are `exists` (where the constructor has arguments) and
-    `Or.intro` (which has multiple constructors).
-  -/
+  /-- Supports singleton elimination ? -/
   k : Bool
   deriving Inhabited
 
@@ -169,65 +142,26 @@ instance : Coe RecursorVal Declaration := ⟨recursorDecl⟩
 end Declaration
 
 abbrev ConstContext := HashMap Name Declaration
-abbrev VarContext := Array $ Option Term
 
 structure TCContext where
   const_ctx : ConstContext := default
   var_ctx : VarContext := default
-  debug : List String := []
+  debug : Array String := #[]
 deriving Inhabited
 
-abbrev TypedTerm := Term × Term
+abbrev TCEnv := ReaderT TCContext Result
 
-inductive TCError : Type :=
-  | unboundDeBruijnIndex : Nat → List Term → TCError
-  | unknownConstant : Name → TCError
-  | notASort : Term → TCError
-  | notDefEq : Term → Term → TCError
-  | wrongArgumentType : Term → Term → TypedTerm → TCError
-  --| notAFunction : Value → Value → TCError
-  | notAFunction₂ : TypedTerm → Term → TCError
-  | unTypedVariable : Nat → VarContext → TCError
-  | cannotInfer : Term → TCError
-  | wrongNumberOfUniverse : Name → Nat → Nat → TCError
-  | alreadyDefined : Name → TCError
-deriving Repr
-
-instance : ToString TCError where
-  toString
-    | .unboundDeBruijnIndex n con => s!"unbound De Bruijn index {n} in context {con}"
-    | .unknownConstant c => s!"unknown constant {c}"
-    | .notASort t => s!"expected a sort, found {t}"
-    | .notDefEq t₁ t₂ => s!"{t₁} \nand \n{t₂} \nare not definitionally equal"
-    | .wrongArgumentType f exp (t,ty)=> s!"function {f} expects an argument of type {exp}, received argument {t} of type {ty}"
-    | .cannotInfer t => s!"cannot infer type of term {t}"
-    | .alreadyDefined s => s!"{s} is already defined"
-    | .wrongNumberOfUniverse s n k => s!"wrong number of universes given, {s} expect {n} universes, received {k}"
-    | .unTypedVariable v ctx => s!"unable to infer the type of variable {v} in context {ctx}"
-    --| .notAFunction f x => s!"{f} is not a function but was given an argument {x}"
-    | .notAFunction₂ (f,ty) x => s!"{f} : {ty} is not a function but was given an argument {x}"
-      
-abbrev Result (A) := Except TCError A
-
-abbrev TCEnv := ReaderT TCContext (Except TCError)
-
-def EStateM.Result.get : EStateM.Result ε σ α → σ
-  | .ok _ st
-  | .error _ st => st
+open TCKind
 
 def add_trace (ty : String) (tr : String): TCEnv Unit := do
-    if ty ∈ (← read).debug || "all" ∈ (← read).debug then dbg_trace tr
+    if (← read).debug.any (λ d => d = ty || d = "all") then 
+      dbg_trace tr
 
 def with_add_const (name : Name) (c : Declaration) (u : TCEnv α) : TCEnv α := do
-    --add_trace "cmd" s!"adding const {name} to the env"
+    add_trace "cmd" s!"adding const {name} to the env"
     if let some _ := (← read).const_ctx.find? name then
-      throw $  .alreadyDefined name
-    withReader 
-      (λ con : TCContext => 
-        let res : TCContext := {const_ctx := con.const_ctx.insert name c}
-        --dbg_trace s!"{repr res.const_ctx.toArray}"
-        res
-      )
+      throw ↑(alreadyDefined name)
+    withReader (λ con => {con with const_ctx := con.const_ctx.insert name c})
       u
 
 def with_add_decl (d: Declaration) : TCEnv α → TCEnv α := 
@@ -261,17 +195,17 @@ def get_const_decl? (s : Name) : TCEnv (Option Declaration) := do
   
 def get_const_type (s : Name) (arr : Array Level): TCEnv Term := do
   let res := (← read).const_ctx.find? s
-  let some c := res | throw $ .unknownConstant s
+  let some c := res | throw $ ↑(unknownConstant s)
   if c.levelParamsNum != arr.size then
-    throw $ .wrongNumberOfUniverse s c.levelParamsNum arr.size
-  return c.type.substitute_univ arr --todo substitute univ
+    throw ↑(wrongNumberOfUniverse s c.levelParamsNum arr.size)
+  return c.type.substitute_univ arr
     
 instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
   let ctx := (← read).var_ctx
   let some optty := ctx.get? (ctx.size - n) | panic! s!"unknown free var {n}"
-  let some ty := optty | throw $ .unTypedVariable n ctx
+  let some ty := optty | throw ↑(unTypedVariable n ctx)
   pure ty
 instance : GetType $ Nat := ⟨get_var_type⟩
 

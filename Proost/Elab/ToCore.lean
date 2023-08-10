@@ -11,14 +11,15 @@ import Std.Data.HashMap
 
 open Std (HashMap)
 open PMap
+open RawError
 
-abbrev RawLevelEnv := ReaderT (HashMap String Nat) (Except RawError)
+abbrev RawLevelEnv := ReaderT (HashMap String Nat) $ Except $ WithTrace RawError
 
 def RawLevel.toCore (l : RawLevel) : RawLevelEnv Level := do
   match l with
   | var s => 
     let index := (← read)
-    let some n := index.find? s | throw $ .unboundLevelVar s
+    let some n := index.find? s | throw ↑(unboundLevelVar s)
     return .var n
   | num n => pure $ OfNat.ofNat n
   | plus l n => pure $ .plus (← toCore l) n
@@ -30,7 +31,7 @@ structure RawTermCtx where
   vars : Queue String
 deriving Inhabited
 
-abbrev RawTermEnv := ReaderT RawTermCtx $ Except RawError
+abbrev RawTermEnv := ReaderT RawTermCtx $ Except $ WithTrace RawError
 
 instance :  MonadLiftT RawLevelEnv RawTermEnv where
   monadLift {α} (a : RawLevelEnv α) := do
@@ -60,7 +61,7 @@ def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
         ty.toCore
       return .prod t ty
     | lam x ty t =>
-      let ty ← attach ty |>.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
+      let ty ← ty.attach |>.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
       let t ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
         t.toCore
@@ -73,14 +74,14 @@ def RawTerm.toCore (t : RawTerm) : RawTermEnv Term := do
       let arr ← Array.mapM (liftM ∘ RawLevel.toCore) arr
       return .const s arr
     | «let» x ty t body => 
-      let ty ← ty.mapM RawTerm.toCore
+      let ty ← ty.attach |>.mapM (λ ⟨e,_⟩ => RawTerm.toCore e)
       let t ← t.toCore
       let body ← withReader 
         (λ ctx =>  {ctx with vars := ctx.vars.push x}) 
         body.toCore
       return .app (.abs ty body) t
 
-abbrev RawCommandEnv := Except RawError
+abbrev RawCommandEnv := Except $ WithTrace RawError
 
 def map_univs (arr : Array String) : Except RawError (HashMap String Nat) := do 
     let mut map := HashMap.empty
@@ -97,7 +98,7 @@ def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
     | .def s l args ty t =>
       let hm ← match map_univs l with
         | .ok hm => pure hm
-        | .error e => throw e
+        | .error e => throw ↑e
       let (t,ty) := args.foldl
         (λ (t,ty) (idents,ity) => 
           idents.foldr 
@@ -114,7 +115,7 @@ def RawCommand.toCore (t : RawCommand) : RawCommandEnv Command := do
     | .axiom s l ty =>       
       let hm ← match map_univs l  with
         | .ok hm => pure hm
-        | .error e => throw e
+        | .error e => throw ↑e
       let ty ← RawTerm.toCore ty ⟨hm,default⟩
       return .axiom s hm.size ty
 

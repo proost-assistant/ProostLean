@@ -17,6 +17,9 @@ inductive Term : Type :=
   | ann   : Term → Term → Term
 deriving Repr, Inhabited, BEq
 
+abbrev VarContext := Array $ Option Term
+abbrev TypedTerm := Term × Term
+
 open Term
 
 def mkAppN : Term → Array Term → Term := fun hd arr =>

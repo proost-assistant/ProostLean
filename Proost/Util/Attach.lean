@@ -1,9 +1,8 @@
 import Std
 open Std
 
-
 class PMap (T : Type _ → Type _) [∀ α, Membership α (T α)] where
-  pmap {p : α → Prop} (f : ∀ a, p a → β) : ∀ l : T α, (∀ a : α, a ∈ l → p a) → T β
+  pmap {p : α → Prop} : (∀ a, p a → β) → ∀ l : T α, (∀ a : α, a ∈ l → p a) → T β
 
 attribute [simp] PMap.pmap
 
@@ -18,13 +17,5 @@ def attach [∀ α, Membership α (T α)] [PMap T] {α : Type u_1} (l : T α) : 
 instance : PMap List where
   pmap := List.pmap
 
-instance : Membership α (Option α) where
-  mem x o := match _p : o with
-    | none => False
-    | some y => x = y
-
 instance : PMap Option where  
-  pmap := λ f o h => match _p : o with
-    | none => none
-    | some x => some $ f x $ h _ rfl
-
+  pmap := Option.pmap
