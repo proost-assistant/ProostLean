@@ -1,9 +1,19 @@
-{"version": 4,
+{"version": 5,
  "packagesDir": "lake-packages",
  "packages":
  [{"git":
+   {"url": "https://github.com/mhuisi/lean4-cli",
+    "subDir?": null,
+    "rev": "21dac2e9cc7e3cf7da5800814787b833e680b2fd",
+    "opts": {},
+    "name": "Cli",
+    "inputRev?": "21dac2e9cc7e3cf7da5800814787b833e680b2fd",
+    "inherited": false}},
+  {"git":
    {"url": "https://github.com/leanprover/std4",
     "subDir?": null,
-    "rev": "dff883c55395438ae2a5c65ad5ddba084b600feb",
-    "name": "std",
-    "inputRev?": "dff883c55395438ae2a5c65ad5ddba084b600feb"}}]}
+    "rev": "28459f72f3190b0f540b49ab769745819eeb1c5e",
+    "opts": {},
+    "name": "Std",
+    "inputRev?": "28459f72f3190b0f540b49ab769745819eeb1c5e",
+    "inherited": false}}]}

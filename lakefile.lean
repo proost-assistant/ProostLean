@@ -21,6 +21,6 @@ lean_exe debug where
   moreLeancArgs := #["-pg","-O0","-g"]
 
 
-require Std from git "https://github.com/leanprover/std4" @ "17c3833ab170ce20fd065ae3fb550300b3d85f23"
+require Std from git "https://github.com/leanprover/std4" @ "28459f72f3190b0f540b49ab769745819eeb1c5e"
 
-require Cli from git "https://github.com/mhuisi/lean4-cli" @ "nightly"
+require Cli from git "https://github.com/mhuisi/lean4-cli" @ "21dac2e9cc7e3cf7da5800814787b833e680b2fd"
