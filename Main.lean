@@ -24,33 +24,32 @@ def type_check_file (file : String) (opts : Array String): IO Unit := do
     else println! s!"Successfully type-checked {file}."
 
 def runProostCmd (p : Parsed) : IO UInt32 := do
-  let args := p.positionalArg! "input" |>.as! (Array String)
+  let args := p.positionalArg! "inputs" |>.as! (Array String)
   let flags := Id.run do
-    let some flags := p.flag? "priority"  | #[]
+    let some flags := p.flag? "verbose" | #[]
       flags.as! (Array String)
-  for file in  args  do
-    --println! s!"checking {file}"
+  for file in args  do
+    println! s!"checking {file}"
     type_check_file file flags
   return  0
 
 def proostCmd : Cmd := `[Cli|
   proostCmd VIA runProostCmd; ["0.0.1"]
-  "This string denotes the description of `exampleCmd`."
+  "TODO Description"
 
   FLAGS:
     v, verbose : Array String; "Add verbose flags" ++
                                "flags : all, tc, cmd, print, nbe"
 
   ARGS:
-    inputs : Array String; "Declares a positional argument <input> " ++
-                           "that takes an argument of type `String`."
+    inputs : Array String; "files to compile"
 
   -- The EXTENSIONS section denotes features that
   -- were added as an external extension to the library.
   -- `./Cli/Extensions.lean` provides some commonly useful examples.
   EXTENSIONS:
     author "arthur-adjedj";
-    defaultValues! #[("priority", "0")]
+    defaultValues! #[("inputs","#[]")]
 ]
 
 
