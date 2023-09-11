@@ -1,5 +1,8 @@
 def foo : Eq.{1} Nat zero zero := tt
 
+def id.{u} (A : Sort u) (x : A) := A
+
 def id_nat : Nat -> Nat := fun n => n
 
-def foo2 (n : Nat) : Eq.{1} Nat n n -> Eq.{1} Nat (succ n) (succ n) := fun h => h
+def foo2 (n : Nat) : Eq.{1} Nat n n -> Eq.{1} Nat (succ n) (succ n) := 
+    id.{0} (Eq.{1} Nat n n)
