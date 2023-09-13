@@ -144,6 +144,7 @@ end Declaration
 abbrev ConstContext := HashMap Name Declaration
 
 structure TCContext where
+  fvar_count : Nat := 0
   const_ctx : ConstContext := default
   var_ctx : VarContext := default
   debug : Array String := #[]

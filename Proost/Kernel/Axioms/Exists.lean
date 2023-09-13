@@ -10,7 +10,7 @@ def «exists» : AxiomVal :=
   { name := "Exists"
     type := 
         prod prop
-      $ prod (prod (var 1) prop) 
+      $ prod (prod (bvar 1) prop) 
       $ prop
   }
 
@@ -19,10 +19,10 @@ def exists_intro : AxiomVal :=
     type := 
       -- (A : Prop) -> (B :A -> Prop) -> (x : A) -> (y : B x) -> Exists A B
         prod prop
-      $ prod (prod (var 1) prop) 
-      $ prod (var 2)
-      $ prod (app (var 2) (var 1))
-      $ mkAppN (const "Exists" #[]) #[var 4, var 3]
+      $ prod (prod (bvar 1) prop) 
+      $ prod (bvar 2)
+      $ prod (app (bvar 2) (bvar 1))
+      $ mkAppN (const "Exists" #[]) #[bvar 4, bvar 3]
   }
 
 -- We favor a negative presentation of the existential since it's easier to define
@@ -32,9 +32,9 @@ def fst: AxiomVal :=
     type := 
       -- (A : Prop) -> (B :A -> Prop) -> Exists A B -> A
         prod prop
-      $ prod (prod (var 1) prop) 
-      $ prod (mkAppN (const "Exists" #[]) #[var 2, var 1])
-      $ var (3)
+      $ prod (prod (bvar 1) prop) 
+      $ prod (mkAppN (const "Exists" #[]) #[bvar 2, bvar 1])
+      $ bvar (3)
   }
 
 def snd: AxiomVal :=
@@ -42,7 +42,7 @@ def snd: AxiomVal :=
     type := 
       -- (A : Prop) -> (B :A -> Prop) -> Exists A B -> A
         prod prop
-      $ prod (prod (var 1) prop) 
-      $ prod (mkAppN (const "Exists" #[]) #[var 2, var 1])
-      $ app (var 2) (mkAppN (const "fst" #[]) #[var 3, var 2, var 1])
+      $ prod (prod (bvar 1) prop) 
+      $ prod (mkAppN (const "Exists" #[]) #[bvar 2, bvar 1])
+      $ app (bvar 2) (mkAppN (const "fst" #[]) #[bvar 3, bvar 2, bvar 1])
   }

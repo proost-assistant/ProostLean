@@ -53,7 +53,7 @@ where
     | t@(const ..)
     | t@(sort ..) => t
 
-partial def instantiate (image : Term) : Term → Term :=
+partial def instantiate1 (image : Term) : Term → Term :=
   go 0
 where
   go outer := fun
@@ -74,9 +74,7 @@ where
 
 @[inline]
 def substitute (image : Term) (name : Name) : Term → Term :=
-  Term.instantiate image ∘ Term.abstract name
-
-
+  instantiate1 image ∘ abstract name
 
 def getAppFn : Term →  Term
   | app f _ => f.getAppFn
@@ -126,40 +124,6 @@ def substitute_univ (lvl : Array Level) : Term → Term
   | abs ty body => abs (ty.attach |>.map (λ ⟨e,_⟩ => substitute_univ lvl e)) (body.substitute_univ lvl)
   | prod a b => prod (a.substitute_univ lvl) (b.substitute_univ lvl)
   | const s arr => const s $ arr.map (Level.substitute · lvl)
-
-def shift (offset depth : Nat) : Term → Term
-  | bvar n => 
-    let n := if n >= depth then n+offset else n
-    bvar n
-  | app t₁ t₂ => app (t₁.shift offset depth) (t₂.shift offset depth)
-  | abs ty body =>
-    let ty   := ty.attach.map (λ ⟨e,_⟩ => shift offset depth e)
-    let body := body.shift offset depth.succ
-    abs ty body
-  | prod ty body =>
-    let ty := ty.shift offset depth
-    let body := body.shift offset depth.succ
-    prod ty body
-  | const s l => const s l
-  | sort l => sort l
-
-def substitute (self sub : Term) (depth : Nat) : Term := match self with
-  | bvar n => match compare n depth with
-      | .eq => sub.shift depth.pred 1
-      | .gt => bvar (n-1)
-      | .lt => bvar n
-  | app t₁ t₂ => app (t₁.substitute sub depth) (t₂.substitute sub depth)
-  | abs ty body => 
-    let ty := ty.attach.map (λ ⟨e,_⟩ => substitute e sub depth)
-    let body := body.substitute sub depth.succ
-    abs ty body 
-  | prod ty body => 
-    let ty := ty.substitute sub depth
-    let body := body.substitute sub depth.succ
-    prod ty body
-  | const s l => const s l
-  | sort l => sort l
-
 
 def isConstOf : Term → Name → Bool
   | const n .., m => n == m

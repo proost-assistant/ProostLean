@@ -15,7 +15,7 @@ def sort_u := sort $ .var 0
 
 def eq : InductiveVal :=
   { name := "Eq"
-    type := prod sort_u $ prod (var 1) $ prod (var 2) prop
+    type := prod sort_u $ prod (bvar 1) $ prod (bvar 2) prop
     all := ["Eq"]
     numParams := 2
     numIndices := 1
@@ -30,7 +30,7 @@ def refl : ConstructorVal :=
     induct := "Eq"
     type := 
       -- (A : Sort u) -> (x : A) -> Eq.{u} A x x
-      prod sort_u $ prod (var 1) $ const "Eq" #[.var 0] (var 2) (var 1) (var 1)
+      prod sort_u $ prod (bvar 1) $ const "Eq" #[.var 0] (bvar 2) (bvar 1) (bvar 1)
     cidx := 1
     numParams := 2
     numFields := 1
@@ -43,9 +43,9 @@ def cast_ : AxiomVal :=
       -- (A B : Sort u) -> Eq.{u+1} (Sort u) A B -> A -> B
         prod sort_u 
       $ prod sort_u 
-      $ prod (const "Eq" #[.succ $ .var 0] (.sort (.var 0)) (var 2) (var 1)) 
-      $ prod (var 3) 
-      $ var 3
+      $ prod (const "Eq" #[.succ $ .var 0] (.sort (.var 0)) (bvar 2) (bvar 1)) 
+      $ prod (bvar 3) 
+      $ bvar 3
   }
   
 def transport : AxiomVal :=
@@ -54,12 +54,12 @@ def transport : AxiomVal :=
     type :=
       -- (A : Type u) -> (t : A) -> (B : A -> Prop) -> B t -> (t' : A) → Eq.{u+1} A t t' -> B t'
         prod (type $ .var 0)
-      $ prod (var 1)
-      $ prod (prod (var 2) prop)
-      $ prod ((var 1) (var 3))
-      $ prod (var 4)
-      $ prod (eq_ (.succ $ .succ $ .var 0) (var 5) (var 4) (var 1)) 
-      $ (var 4) (var 2)
+      $ prod (bvar 1)
+      $ prod (prod (bvar 2) prop)
+      $ prod ((bvar 1) (bvar 3))
+      $ prod (bvar 4)
+      $ prod (eq_ (.succ $ .succ $ .var 0) (bvar 5) (bvar 4) (bvar 1)) 
+      $ (bvar 4) (bvar 2)
   }
 
 def eq_axioms : List Declaration :=
@@ -68,23 +68,23 @@ def eq_axioms : List Declaration :=
 --def eq_rec : AxiomVal := 
 --  { name := "Eq_rec"
 --    type := 
---      let sort_u := sort (.var 0)
---      let sort_v := sort (.var 1)
+--      let sort_u := sort (.bvar 0)
+--      let sort_v := sort (.bvar 1)
 --      -- {α : Sort u_2} → {a : α} → {motive : (a_1 : α) → a = a_1 → Sort u_1} 
 --      -- → motive a (_ : a = a) → {a_1 : α} → (t : a = a_1) → motive a_1 t
 --      prod sort_u
---      $ prod (var 1)
+--      $ prod (bvar 1)
 --      $ prod (
---             prod (var 2)
---          $  prod (eq_ (.var 1)  (var 3) (var 2) (var 1))
+--             prod (bvar 2)
+--          $  prod (eq_ (.bvar 1)  (bvar 3) (bvar 2) (bvar 1))
 --          $  sort_v
 --         )
 --    $  prod (
---          (var 1) (var 2) (refl_ (.var 1) (var 3) (var 2) (var 2))
+--          (bvar 1) (bvar 2) (refl_ (.bvar 1) (bvar 3) (bvar 2) (bvar 2))
 --         )
---      $ prod (var 4)
---      $ prod (eq_ (.var 1) (var 5) (var 4) (var 1))
---      $ mkAppN (var 4) #[var 2, var 1]
+--      $ prod (bvar 4)
+--      $ prod (eq_ (.bvar 1) (bvar 5) (bvar 4) (bvar 1))
+--      $ mkAppN (bvar 4) #[bvar 2, bvar 1]
 --  }
 
 
@@ -94,7 +94,7 @@ def reduce_eq_prod (d₁ d₂ b₁ b₂ : Term) : TCEnv (Option Term) := do
   let rhs := 
       --(a' : d₂) ->  b₁ (cast d₂ d₁ e a')) = b2 a'
       prod d₂ 
-    $ eq_ (l₂+1) s₂ (b₁ (cast__ l₁ d₂ d₁ (var 2) (var 1))) (b₂ (var 1))
+    $ eq_ (l₂+1) s₂ (b₁ (cast__ l₁ d₂ d₁ (bvar 2) (bvar 1))) (b₂ (bvar 1))
   return some$ exists_ (eq_ (l₁+1) s₁ d₂ d₁) (abs none rhs)
 
 --returns true if the heads are definitely different
@@ -149,7 +149,7 @@ def reduce_eq_nat (t₁ t₂ : Term): TCEnv (Option Term) := do
 
 def reduce_eq_fun (A B t₁ t₂ : Term): TCEnv (Option Term) := do
   let sort l ← infer B | unreachable!
-  let x := var 1
+  let x := bvar 1
   let new_eq := eq_ l (B.substitute x 1) (app (t₁.shift 1 0) x) (app (t₂.shift 1 0) x) 
   return prod A new_eq
 
@@ -191,8 +191,8 @@ def red_cast_prod (A A' B B' e f : Term) : TCEnv (Option Term) := do
   let rhs_exists := 
        prod lhs_exists
     $  prod A' 
-    $ eq_ (l₂+1) s₂ (B  (cast__ l₁ A' A (var 2) (var 1))) (B' (var 1))
-  let a' := var 1
+    $ eq_ (l₂+1) s₂ (B  (cast__ l₁ A' A (bvar 2) (bvar 1))) (B' (bvar 1))
+  let a' := bvar 1
   let a := cast__ (l₁+1) s₁ A' A (fst_ lhs_exists rhs_exists e) a'
   let res :=
     abs A' (cast__ (l₂+1) s₂ (B a) (B' a') (snd_ lhs_exists rhs_exists e a') (f a)) 

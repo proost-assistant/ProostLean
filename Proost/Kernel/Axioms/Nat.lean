@@ -48,10 +48,10 @@ def nat_rec : RecursorVal :=
   { name := "Nat_rec"
     type := 
         prod (prod nat_ (sort $ .var 0))
-      $ prod (app (var 1) (const "zero" #[]))
-      $ prod (prod nat_ (prod (app (var 3) (var 1)) (app (var 4) (app succ_ (var 2)))))
+      $ prod (app (bvar 1) (const "zero" #[]))
+      $ prod (prod nat_ (prod (app (bvar 3) (bvar 1)) (app (bvar 4) (app succ_ (bvar 2)))))
       $ prod nat_ 
-      $ app (var 4) (var 1)
+      $ app (bvar 4) (bvar 1)
     all := ["Nat"]
     numParams := 0
     numIndices := 0
@@ -66,7 +66,7 @@ def nat_rec : RecursorVal :=
           .abs none 
         $ .abs none
         $ .abs none
-        $ var 2
+        $ bvar 2
     },{
       ctor := "succ"
       nfields := 1
@@ -76,7 +76,7 @@ def nat_rec : RecursorVal :=
         $ .abs none
         $ .abs none
         $ .abs none
-        $ (var 2) (var 1) (nat_rec_ (.var 0) (var 4) (var 3) (var 2) (var 1))
+        $ (bvar 2) (bvar 1) (nat_rec_ (.var 0) (bvar 4) (bvar 3) (bvar 2) (bvar 1))
     }
     ]
   }

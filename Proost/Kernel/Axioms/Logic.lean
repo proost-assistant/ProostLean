@@ -43,7 +43,7 @@ def false_rec : RecursorVal :=
     type := 
         prod (sort $ .var 0)
       $ prod (const "False" #[])
-      $ var 2
+      $ bvar 2
     all := ["False"]
     numParams := 0
     numIndices := 0
