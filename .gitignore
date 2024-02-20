@@ -3,3 +3,4 @@
 !/lean_packages/manifest.json
 perf.data*
 __pycache__
+.lake/*

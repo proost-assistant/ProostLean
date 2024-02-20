@@ -8,35 +8,6 @@ inductive Level : Type :=
   | var  : Nat   → Level
 deriving Repr, DecidableEq, Inhabited
 
-@[match_pattern]
-instance : OfNat Level 0 := ⟨.zero⟩
-
-instance : OfNat Level n := ⟨.plus .zero n⟩ 
-
-@[match_pattern,default_instance]
-instance : HAdd Level Nat Level := ⟨Level.plus⟩
-
-def Level.succ : Level → Level := (· + 1) 
-
-def Level.toNum? : Level → Option Nat
-  | 0 => some 0
-  | l + n => l.toNum?.map (· + n)
-  | max l₁ l₂ => do pure $ Nat.max (← l₁.toNum?) (← l₂.toNum?)
-  | imax l₁ l₂ =>
-    if let some 0 := l₂.toNum? then some 0
-    else do pure $ Nat.max (← l₁.toNum?) (← l₂.toNum?)
-  | var .. => none
-
-def Level.toString (l : Level): String :=
-  match l with
-  | 0 => "0"
-  | l + n => l.toString ++ s!" + {n}"
-  | var i => "u" ++ ToString.toString i
-  | max l1 l2 => "max (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
-  | imax l1 l2 => "imax (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
-
-instance : ToString Level := ⟨Level.toString⟩
-
 inductive State : Type :=
   | true
   | false
@@ -48,6 +19,37 @@ def State.isTrue : State → Bool
   | _ => .false
 
 namespace Level
+
+@[match_pattern]
+instance : OfNat Level 0 := ⟨.zero⟩
+
+instance : OfNat Level n := ⟨.plus .zero n⟩
+
+@[match_pattern,default_instance]
+instance : HAdd Level Nat Level := ⟨Level.plus⟩
+
+def succ : Level → Level := (· + 1)
+
+def toNum? : Level → Option Nat
+  | 0 => some 0
+  | l + n => l.toNum?.map (· + n)
+  | max l₁ l₂ => do pure $ Nat.max (← l₁.toNum?) (← l₂.toNum?)
+  | imax l₁ l₂ =>
+    if let some 0 := l₂.toNum? then some 0
+    else do pure $ Nat.max (← l₁.toNum?) (← l₂.toNum?)
+  | var .. => none
+
+def toString (l : Level): String := Id.run do
+  if let some n := l.toNum? then
+    return s!"{n}"
+  match l with
+  | 0 => unreachable!
+  | l + n => l.toString ++ s!" + {n}"
+  | var i => "u" ++ ToString.toString i
+  | max l1 l2 => "max (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
+  | imax l1 l2 => "imax (" ++ l1.toString ++ ") (" ++ l2.toString ++")"
+
+instance : ToString Level := ⟨toString⟩
 
 partial def normalize (self: Level) : Level := match self with
   | imax u v =>
@@ -63,7 +65,7 @@ partial def normalize (self: Level) : Level := match self with
     match u,v with
       | 0, _ => v
       | _,0 => u
-      | uu + n₁, vv + n₂ => 
+      | uu + n₁, vv + n₂ =>
         let n := min n₁ n₂
         ((uu + (n₁-n)).max (vv + (n₂-n))).plus n
       | _,_ => self
@@ -74,7 +76,7 @@ partial def normalize (self: Level) : Level := match self with
     else self
   | _ => self
 
-def n_of_univ : Level → Nat 
+def n_of_univ : Level → Nat
   | 0 => 0
   | l + _ => l.n_of_univ
   | max l₁ l₂
@@ -138,5 +140,3 @@ def is_eq (lhs rhs : Level) : Bool := lhs.geq rhs 0 && rhs.geq lhs 0
 instance : BEq Level := ⟨is_eq⟩
 
 end Level
-
-

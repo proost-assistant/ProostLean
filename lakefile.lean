@@ -20,7 +20,6 @@ lean_exe debug where
     "-DautoImplicit=false"]
   moreLeancArgs := #["-pg","-O0","-g"]
 
-
-require Std from git "https://github.com/leanprover/std4" @ "28459f72f3190b0f540b49ab769745819eeb1c5e"
+require std from git "https://github.com/leanprover/std4" @ "main"
 
 require Cli from git "https://github.com/mhuisi/lean4-cli" @ "21dac2e9cc7e3cf7da5800814787b833e680b2fd"
