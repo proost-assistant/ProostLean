@@ -4,24 +4,29 @@ open Cli
 
 open Lean
 
-def type_check_file (file : String) (opts : Array String): IO Unit := do
-  let code ← timeit "Reading file:" $ IO.FS.readFile ⟨file⟩ 
+def type_check_file (file : String) (opts : Array String := #[]): IO Unit := do
+  let code ← timeit "Reading file:" $ IO.FS.readFile ⟨file⟩
   initSearchPath (← Lean.findSysroot) ["build/lib"]
-  let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
   --println! "parsing {file}"
-  let raw ← timeit "Parsing :" $ IO.ofExcept $ parse code env
+  let raw ← timeit "Parsing :" $ parse code
   --println! "parsing succeeded !\n Commands produced:\n  {raw}"
   --println! "elaborating"
   let core ← timeit "Elaborating:" $  IO.ofExcept $ raw.toCore
   println! "elaboration succeeded !\n Term produced:\n  {core}"
   timeit "Type-checking :" $ do
     let ctx : TCContext := {debug := opts}
-    let eval_commands := 
+    let eval_commands :=
       (with_initialize_env_axioms <| evalCommands core)
       ctx
     if let .error e := eval_commands then
       throw $ IO.Error.userError $ ToString.toString e
     else println! s!"Successfully type-checked {file}."
+
+#eval show IO _ from do
+  let code ← IO.FS.readFile ⟨"tests/foo.mdln"⟩
+  let raw  ← parse code
+  let core ←  IO.ofExcept $ raw.toCore
+  println! core
 
 def runProostCmd (p : Parsed) : IO UInt32 := do
   let args := p.positionalArg! "inputs" |>.as! (Array String)
@@ -57,4 +62,3 @@ def proostCmd : Cmd := `[Cli|
 
 def main (args : List String) : IO UInt32 := do
   proostCmd.validate args
-

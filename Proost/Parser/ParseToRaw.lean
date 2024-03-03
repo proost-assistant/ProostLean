@@ -11,12 +11,12 @@ partial def elabLevel (stx : TSyntax `proost_level) : Except String RawLevel := 
   | `(proost_level| ($l)) => elabLevel l
 
   | `(proost_level| $n:num) => return .num n.getNat
-  
+
   | `(proost_level| $x:ident) => return .var x.getId.toString
 
   | `(proost_level| $l + 0) => elabLevel l
-  
-  | `(proost_level| $l + $n) => 
+
+  | `(proost_level| $l + $n) =>
         let l ← elabLevel l
         return .plus l n.getNat
 
@@ -47,16 +47,16 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
 
   | `(proost| ($t)) => elabProost t
 
-  | `(proost| $x:ident $[.{ $l:proost_level ,* }]?  ) => 
-      let arr ←  
+  | `(proost| $x:ident $[.{ $l:proost_level ,* }]?  ) =>
+      let arr ←
         if let some stx := l then
             Array.mapM elabLevel stx
         else pure Array.empty
       return .varconst x.getId.toString arr
-    
+
   | `(proost| ($t : $ty)) => do
       let t ← elabProost t
-      let ty ← elabProost ty 
+      let ty ← elabProost ty
       return .ann t ty
 
   | `(proost| $t $arg) => do
@@ -70,7 +70,7 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
         return .lam x.getId.toString A B
 
   | `(proost| fun $[$y * $[: $A]?],* => $B) => do
-        let A ← A.mapM (Option.mapM elabProost)  
+        let A ← A.mapM (Option.mapM elabProost)
         let mut res ← elabProost B
         for i in [1:y.size+1] do
           let cur := y.size-i
@@ -80,22 +80,22 @@ partial def elabProost (stx : TSyntax `proost) : Except String RawTerm := do
             let x := y[cur]![sub]!.getId.toString
             res ← pure $ .lam x ty res
         return res
-      
+
   | `(proost| $A -> $B) => do
-        let A ← elabProost A  
+        let A ← elabProost A
         let B ← elabProost B
         return .pi "_" A B
 
   | `(proost| ($x:ident : $A ) -> $B ) => do
-        let A ← elabProost A  
+        let A ← elabProost A
         let B ← elabProost B
         return .pi x.getId.toString A B
 
   | `(proost| ($y * : $A ) -> $B) => do
-        let A ← elabProost A  
+        let A ← elabProost A
         let B ← elabProost B
         y.foldrM (λ x t => return .pi x.getId.toString A t) B
-        
+
   | _ => throw s!"unknown term syntax: {stx}"
 
 partial def elabCommand (stx : TSyntax `proost_command) : Except String RawCommand := do
@@ -103,7 +103,7 @@ partial def elabCommand (stx : TSyntax `proost_command) : Except String RawComma
   | `(proost_command| def $s $[.{ $l:ident ,* }]? $[($args * : $args_ty)]* $[: $ty]? := $t) =>
       let l := Id.run do
         let some l := l | #[]
-        l.getElems.map (·.getId.toString) 
+        l.getElems.map (·.getId.toString)
       let mut res_args := []
       for i in [:args.size] do
         let ty ← elabProost args_ty[i]!
@@ -113,31 +113,32 @@ partial def elabCommand (stx : TSyntax `proost_command) : Except String RawComma
       -- parse arguments
       return .def s.getId.toString l res_args ty t
 
-  | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) => 
+  | `(proost_command| axiom $s $[.{ $l:ident ,* }]? : $ty ) =>
       let l := Id.run do
         let some l := l | #[]
-        l.getElems.map (·.getId.toString) 
+        l.getElems.map (·.getId.toString)
       let ty ← elabProost ty
       return .axiom s.getId.toString l ty
 
-  | `(proost_command| check $t) => 
-      let t ← elabProost t 
+  | `(proost_command| check $t) =>
+      let t ← elabProost t
       return .check t
 
-  | `(proost_command| eval $t) => 
-      let t ← elabProost t 
+  | `(proost_command| eval $t) =>
+      let t ← elabProost t
       return .eval t
-  
+
   | _ => throw s!"unknown command: {stx}"
 
 
 partial def elabCommands (stx : TSyntax `proost_commands) : Except String RawCommands := do
    match stx with
-  | `(proost_commands| $[$cl]* ) => 
+  | `(proost_commands| $[$cl]* ) =>
       let cl := cl
       cl.mapM elabCommand |>.map Array.toList
   | _ => throw s!"unknown commands syntax: {stx}"
 
 
-def parse (s: String) (env: Environment) : Except String RawCommands := do
-  elabCommands ⟨(← Parser.runParserCategory env `proost_commands s)⟩ 
+def parse (s: String): IO RawCommands := do
+  let env ← importModules [{ module := `Proost.Parser.ParseToRaw }] {}
+  IO.ofExcept do elabCommands ⟨← Parser.runParserCategory env `proost_commands s⟩

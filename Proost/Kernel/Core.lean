@@ -88,7 +88,7 @@ structure RecursorVal extends ConstantVal where
   deriving Inhabited
 
 namespace RecursorVal
- 
+
 def getMajorIdx (v : RecursorVal) : Nat :=
   v.numParams + v.numMotives + v.numMinors + v.numIndices
 
@@ -112,7 +112,7 @@ inductive Declaration where
   | recursorDecl    (val : RecursorVal)
 deriving Inhabited
 
-namespace Declaration 
+namespace Declaration
 
 def toConstantVal : Declaration → ConstantVal
   | axiomDecl    d => d
@@ -121,23 +121,23 @@ def toConstantVal : Declaration → ConstantVal
   | ctorDecl     {toConstantVal := d, ..} => d
   | recursorDecl {toConstantVal := d, ..} => d
 
-def name : Declaration → Name := 
-  ConstantVal.name ∘ Declaration.toConstantVal 
+def name : Declaration → Name :=
+  ConstantVal.name ∘ Declaration.toConstantVal
 
 def type : Declaration → Term :=
   ConstantVal.type ∘ Declaration.toConstantVal
 
 def levelParamsNum : Declaration → Nat :=
-  ConstantVal.levelParamsNum ∘ Declaration.toConstantVal 
+  ConstantVal.levelParamsNum ∘ Declaration.toConstantVal
 
 instance : Repr Declaration where
   reprPrec d := Repr.reprPrec d.name
 
-instance : Coe AxiomVal Declaration := ⟨axiomDecl⟩ 
-instance : Coe DefinitionVal Declaration := ⟨defnDecl⟩ 
-instance : Coe InductiveVal Declaration := ⟨inductDecl⟩ 
-instance : Coe ConstructorVal Declaration := ⟨ctorDecl⟩ 
-instance : Coe RecursorVal Declaration := ⟨recursorDecl⟩ 
+instance : Coe AxiomVal Declaration := ⟨axiomDecl⟩
+instance : Coe DefinitionVal Declaration := ⟨defnDecl⟩
+instance : Coe InductiveVal Declaration := ⟨inductDecl⟩
+instance : Coe ConstructorVal Declaration := ⟨ctorDecl⟩
+instance : Coe RecursorVal Declaration := ⟨recursorDecl⟩
 
 end Declaration
 
@@ -154,7 +154,7 @@ abbrev TCEnv := ReaderT TCContext Result
 open TCKind
 
 def add_trace (ty : String) (tr : String): TCEnv Unit := do
-    if (← read).debug.any (λ d => d = ty || d = "all") then 
+    if (← read).debug.any (λ d => d = ty || d = "all") then
       dbg_trace tr
 
 def with_add_const (name : Name) (c : Declaration) (u : TCEnv α) : TCEnv α := do
@@ -164,13 +164,13 @@ def with_add_const (name : Name) (c : Declaration) (u : TCEnv α) : TCEnv α := 
     withReader (λ con => {con with const_ctx := con.const_ctx.insert name c})
       u
 
-def with_add_decl (d: Declaration) : TCEnv α → TCEnv α := 
+def with_add_decl (d: Declaration) : TCEnv α → TCEnv α :=
     with_add_const d.name d
 
-def with_add_def (d: DefinitionVal) : TCEnv α → TCEnv α := 
+def with_add_def (d: DefinitionVal) : TCEnv α → TCEnv α :=
     with_add_const d.name d
 
-def with_add_axiom (a : AxiomVal) : TCEnv α →  TCEnv α := 
+def with_add_axiom (a : AxiomVal) : TCEnv α →  TCEnv α :=
     with_add_const a.name a
 
 def with_add_axioms (a : List Declaration) : TCEnv α → TCEnv α :=
@@ -192,14 +192,14 @@ class GetType (A: Type) where
 
 def get_const_decl? (s : Name) : TCEnv (Option Declaration) := do
   return (← read).const_ctx.find? s
-  
+
 def get_const_type (s : Name) (arr : Array Level): TCEnv Term := do
   let res := (← read).const_ctx.find? s
   let some c := res | throw $ ↑(unknownConstant s)
   if c.levelParamsNum != arr.size then
     throw ↑(wrongNumberOfUniverse s c.levelParamsNum arr.size)
   return c.type.substitute_univ arr
-    
+
 instance : GetType $ String × Array Level := ⟨uncurry get_const_type⟩
 
 def get_var_type (n:Nat) : TCEnv Term := do
@@ -225,7 +225,7 @@ inductive Command : Type :=
 deriving Repr
 
 instance : ToString Command where
-  toString 
+  toString
     | .def s _ none t => s!"def {s} := {t}"
     | .def s _ (some ty) t => s!"def {s} : {ty} := {t}"
     | .axiom s _ ty => s!"axiom {s} : {ty}"
@@ -234,7 +234,7 @@ instance : ToString Command where
 
 abbrev Commands := List Command
 
-@[extern "proost_whnf"] opaque whnf : Term → TCEnv Term
+@[extern "whnf"] opaque whnf : Term → TCEnv Term
 @[extern "infer"]  opaque infer : Term → TCEnv Term
 @[extern "conversion"] opaque conversion : Term → Term → TCEnv Bool
 @[extern "isDefEq"] opaque isDefEq : Term → Term → TCEnv Unit

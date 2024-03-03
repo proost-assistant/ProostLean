@@ -1,7 +1,7 @@
 import Proost.Kernel.Core
 import Proost.Kernel.Term
 
---The following code is shamelessly stolen from Lean 4 repository, 
+--The following code is copied from Lean 4 repository,
 --because I seriously don't feel like doing recursor reduction myself :)
 
 private def getFirstCtor (d : Name) : TCEnv (Option Name) := do
